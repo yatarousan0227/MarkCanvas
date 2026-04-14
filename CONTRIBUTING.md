@@ -10,9 +10,11 @@ When possible, keep titles and reproduction steps concrete so other contributors
 
 ## Before You Start
 
-- Check whether the bug or feature request already exists.
-- Keep pull requests focused on one change set whenever possible.
-- For non-trivial features or behavior changes, open an issue first so the scope can be aligned before implementation.
+* Check whether the bug or feature request already exists.
+
+* Keep pull requests focused on one change set whenever possible.
+
+* For non-trivial features or behavior changes, open an issue first so the scope can be aligned before implementation.
 
 ## Local Setup
 
@@ -45,30 +47,41 @@ For UI and editor behavior changes, also verify the manual scenario in [docs/man
 
 ## Implementation Notes
 
-- Preserve the Markdown file as the canonical source of truth.
-- Keep extension-to-webview and webview-to-extension message contracts explicit and backward compatible within the PR.
-- Prefer small, readable TypeScript changes over broad refactors unless the refactor is the point of the PR.
-- If you change user-facing behavior, document the reasoning and expected outcomes in the pull request description.
+* Preserve the Markdown file as the canonical source of truth.
+
+* Keep extension-to-webview and webview-to-extension message contracts explicit and backward compatible within the PR.
+
+* Prefer small, readable TypeScript changes over broad refactors unless the refactor is the point of the PR.
+
+* If you change user-facing behavior, document the reasoning and expected outcomes in the pull request description.
 
 ## Pull Request Checklist
 
 Please include the following in your pull request:
 
-- A short summary of the problem and the change
-- Screenshots or recordings for UI changes when useful
-- Test steps you ran, including any manual verification
-- Notes about follow-up work or known limitations, if any
+* A short summary of the problem and the change
+
+* Screenshots or recordings for UI changes when useful
+
+* Test steps you ran, including any manual verification
+
+* Notes about follow-up work or known limitations, if any
 
 ## Reporting Bugs
 
 When opening a bug report, include:
 
-- VS Code version
-- Operating system
-- Steps to reproduce
-- Expected result
-- Actual result
-- Sample Markdown or asset files when the issue depends on document content
+* VS Code version
+
+* Operating system
+
+* Steps to reproduce
+
+* Expected result
+
+* Actual result
+
+* Sample Markdown or asset files when the issue depends on document content
 
 ## Security Issues
 

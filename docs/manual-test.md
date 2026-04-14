@@ -10,6 +10,7 @@
 4. `Open in MarkCanvas` を実行する
 
 数式だけを確認したい場合は `docs/math-sample.md` を開いて同じ手順で確認します。
+派手なデモ表示を確認したい場合は `docs/demo-showcase.md` を開いてください。
 
 ## Milkdown Basics
 
@@ -114,4 +115,3 @@ flowchart TB
 存在しない画像でもエディタ全体が壊れないことを確認します。
 
 ![1.00](./fixtures/missing.svg)
-

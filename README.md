@@ -1,5 +1,7 @@
 # MarkCanvas
 
+<img src="images/icon.png" alt="MarkCanvas icon" width="160" />
+
 ![MarkCanvas top image](images/top.png)
 
 MarkCanvas is an experimental VS Code custom editor extension for editing Markdown in a rendered, canvas-like experience.
@@ -7,8 +9,8 @@ It uses Milkdown/Crepe for WYSIWYG editing, renders Mermaid code fences as previ
 
 ## Status
 
-This repository is ready for local development and OSS collaboration, but it is not yet published to the VS Code Marketplace.
-The package currently targets desktop VS Code and uses the Markdown file itself as the single source of truth.
+This repository is ready for local development, VSIX export, and VS Code Marketplace publishing.
+The extension currently targets desktop VS Code and uses the Markdown file itself as the single source of truth.
 
 ## Features
 
@@ -20,7 +22,7 @@ The package currently targets desktop VS Code and uses the Markdown file itself 
 
 ## Requirements
 
-- VS Code `1.90` or later
+- VS Code `1.45` or later
 - Node.js `20` or later
 - npm
 
@@ -47,6 +49,44 @@ For manual verification, use [docs/manual-test.md](docs/manual-test.md).
 - `npm run watch`: rebuild on file changes during development
 - `npm run typecheck`: run TypeScript type checking without emitting files
 - `npm run test:extension`: run the extension smoke test suite
+- `npm run package:vsix`: create a Marketplace-ready `.vsix` package
+- `npm run package:vsix:pre-release`: create a pre-release `.vsix` package
+
+## Packaging and Publishing
+
+### Export a VSIX
+
+```bash
+npm install
+npm run build
+npm run package:vsix
+```
+
+This creates a `.vsix` file in the repository root that can be installed from VS Code with `Extensions: Install from VSIX...`.
+
+### Publish to VS Code Marketplace
+
+1. Create or confirm a VS Code Marketplace publisher that matches the `publisher` field in `package.json`.
+2. Create a Personal Access Token for the Marketplace.
+3. Log in once:
+
+```bash
+npx @vscode/vsce login yatarousan0227
+```
+
+4. Publish the current version:
+
+```bash
+npm run marketplace:publish
+```
+
+For pre-release publishing:
+
+```bash
+npm run marketplace:publish:pre-release
+```
+
+Versioning is controlled by the `version` field in `package.json`.
 
 ## Project Layout
 
@@ -59,7 +99,6 @@ For manual verification, use [docs/manual-test.md](docs/manual-test.md).
 ## Known Limitations
 
 - Desktop VS Code only. Web extension support is out of scope for the current version.
-- The extension is not packaged for Marketplace distribution yet.
 - draw.io support only applies to linked SVG files that either end with `.drawio.svg` or contain embedded draw.io metadata.
 - Markdown text remains canonical; the rendered editor does not store its own parallel document format.
 

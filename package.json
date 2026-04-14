@@ -3,11 +3,23 @@
   "displayName": "MarkCanvas",
   "description": "Rendered Markdown editor with Mermaid and Draw.io support",
   "version": "0.0.1",
-  "publisher": "local",
-  "private": true,
+  "publisher": "ShinyaIwasaki",
   "license": "MIT",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yatarousan0227/MarkCanvas.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yatarousan0227/MarkCanvas/issues"
+  },
+  "homepage": "https://github.com/yatarousan0227/MarkCanvas#readme",
+  "galleryBanner": {
+    "color": "#0f172a",
+    "theme": "dark"
+  },
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.45.0"
   },
   "categories": [
     "Programming Languages",
@@ -76,7 +88,11 @@
     "test:extension": "node ./test/run-extension-tests.cjs",
     "test": "npm run test:roundtrip && npm run test:extension",
     "compile": "npm run build",
-    "vscode:prepublish": "npm run build"
+    "vscode:prepublish": "npm run build",
+    "package:vsix": "npx @vscode/vsce package --no-dependencies",
+    "package:vsix:pre-release": "npx @vscode/vsce package --no-dependencies --pre-release",
+    "marketplace:publish": "npx @vscode/vsce publish",
+    "marketplace:publish:pre-release": "npx @vscode/vsce publish --pre-release"
   },
   "dependencies": {
     "@milkdown/crepe": "^7.20.0",
@@ -88,8 +104,9 @@
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
+    "@vscode/vsce": "^3.6.2",
     "@types/node": "^24.6.0",
-    "@types/vscode": "^1.115.0",
+    "@types/vscode": "^1.45.0",
     "@vscode/test-electron": "^2.5.2",
     "esbuild": "^0.25.10",
     "jsdom": "^26.1.0",
