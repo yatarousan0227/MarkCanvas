@@ -4,117 +4,96 @@
 
 ![MarkCanvas top image](images/top.png)
 
-MarkCanvas is an experimental VS Code custom editor extension for editing Markdown in a rendered, canvas-like experience.
-It uses Milkdown/Crepe for WYSIWYG editing, renders Mermaid code fences as previews, and recognizes linked draw.io SVG assets so you can jump back to the source diagram file.
+MarkCanvas is an experimental VS Code custom editor for Markdown. It opens `.md` files in a rendered, canvas-like editing experience powered by Milkdown/Crepe while keeping the Markdown file itself as the source of truth.
 
-## Status
+## What It Does
 
-This repository is ready for local development, VSIX export, and VS Code Marketplace publishing.
-The extension currently targets desktop VS Code and uses the Markdown file itself as the single source of truth.
+- Edit Markdown in a rendered custom editor instead of a plain text buffer
+- Preview Mermaid code fences inline
+- Detect linked draw.io SVG assets and jump back to the source diagram file
+- Stay in sync with external edits, undo/redo, and VS Code theme changes
 
-## Features
+## Why MarkCanvas
 
-- Rendered Markdown editing with a custom editor powered by Milkdown
-- Mermaid preview inside fenced code blocks
-- draw.io SVG detection for `*.drawio.svg` files and SVGs with embedded draw.io metadata
-- Theme-aware preview switching for light, dark, and system modes
-- Two-way synchronization with the underlying Markdown document, including external edits and undo/redo
+Traditional Markdown editing is text-first. MarkCanvas explores a different workflow: keep Markdown as Markdown, but interact with it through a richer visual editor inside VS Code.
 
-## Requirements
+This project is a good fit if you want:
+
+- a custom-editor approach instead of a separate preview pane
+- a lightweight visual editing layer without introducing a proprietary document format
+- better handling for Mermaid and draw.io-heavy Markdown documents
+
+## Current Scope
+
+MarkCanvas currently targets desktop VS Code and local Markdown files.
+
+Known limitations:
+
+- Web extension support is out of scope for the current version
+- draw.io support only applies to linked SVG files that end with `.drawio.svg` or contain embedded draw.io metadata
+- Markdown remains canonical; MarkCanvas does not maintain a parallel document model
+
+## Getting Started
+
+### Run From Source
+
+Requirements:
 
 - VS Code `1.45` or later
 - Node.js `20` or later
 - npm
 
-## Getting Started
-
-### Run Locally
+Install dependencies and build the extension:
 
 ```bash
 npm install
 npm run build
 ```
 
-Then open the repository in VS Code and press `F5` to launch an Extension Development Host.
+Then open this repository in VS Code and press `F5` to launch an Extension Development Host.
+
 Inside the development host:
 
 1. Open any Markdown file.
-2. Run `MarkCanvas: Open in MarkCanvas`, or use the explorer/editor context menu entry `Open in MarkCanvas`.
+2. Run `MarkCanvas: Open in MarkCanvas`.
 
-For manual verification, use [docs/manual-test.md](docs/manual-test.md).
+You can also use the `Open in MarkCanvas` entry from the explorer or editor context menu for `.md` files.
 
-### Useful Scripts
+## Development
+
+Useful scripts:
 
 - `npm run build`: build the extension and webview bundles into `dist/`
 - `npm run watch`: rebuild on file changes during development
 - `npm run typecheck`: run TypeScript type checking without emitting files
-- `npm run test:extension`: run the extension smoke test suite
-- `npm run package:vsix`: create a Marketplace-ready `.vsix` package
+- `npm run test`: run the roundtrip and extension test suites
+- `npm run test:roundtrip`: run Markdown roundtrip tests
+- `npm run test:extension`: run the VS Code extension smoke tests
+- `npm run package:vsix`: create a `.vsix` package
 - `npm run package:vsix:pre-release`: create a pre-release `.vsix` package
 
-## Packaging and Publishing
-
-### Export a VSIX
-
-```bash
-npm install
-npm run build
-npm run package:vsix
-```
-
-This creates a `.vsix` file in the repository root that can be installed from VS Code with `Extensions: Install from VSIX...`.
-
-### Publish to VS Code Marketplace
-
-1. Create or confirm a VS Code Marketplace publisher that matches the `publisher` field in `package.json`.
-2. Create a Personal Access Token for the Marketplace.
-3. Log in once:
-
-```bash
-npx @vscode/vsce login yatarousan0227
-```
-
-4. Publish the current version:
-
-```bash
-npm run marketplace:publish
-```
-
-For pre-release publishing:
-
-```bash
-npm run marketplace:publish:pre-release
-```
-
-Versioning is controlled by the `version` field in `package.json`.
+Manual verification notes live in [docs/manual-test.md](docs/manual-test.md). A sample showcase document is available in [docs/demo-showcase.md](docs/demo-showcase.md).
 
 ## Project Layout
 
 - [src/extension.ts](src/extension.ts): extension activation and command registration
-- [src/provider.ts](src/provider.ts): custom editor provider and document/webview synchronization
-- [src/webview](src/webview): webview application, editor behavior, and preview UI
-- [docs/manual-test.md](docs/manual-test.md): manual QA scenario for local validation
-- [docs/implementation-plan.md](docs/implementation-plan.md): implementation scope and design notes
-
-## Known Limitations
-
-- Desktop VS Code only. Web extension support is out of scope for the current version.
-- draw.io support only applies to linked SVG files that either end with `.drawio.svg` or contain embedded draw.io metadata.
-- Markdown text remains canonical; the rendered editor does not store its own parallel document format.
+- [src/provider.ts](src/provider.ts): custom editor provider and document synchronization
+- [src/webview](src/webview): webview UI, rendered editing behavior, and previews
+- [test](test): roundtrip and extension test suites
+- [docs](docs): sample content, manual test notes, and implementation docs
 
 ## Contributing
 
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
-Issues and pull requests are welcome in either English or Japanese.
+Contributions, issues, and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for development and contribution guidelines.
 
 ## Security
 
-Please report vulnerabilities privately when possible. See [SECURITY.md](SECURITY.md).
+If you find a security issue, please report it privately when possible. See [SECURITY.md](SECURITY.md).
 
 ## Code of Conduct
 
-This project follows the rules in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+This project follows [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+Released under the [MIT License](LICENSE).
