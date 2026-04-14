@@ -1,0 +1,99 @@
+{
+  "name": "markcanvas",
+  "displayName": "MarkCanvas",
+  "description": "Rendered Markdown editor with Mermaid and Draw.io support",
+  "version": "0.0.1",
+  "publisher": "local",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Visualization"
+  ],
+  "keywords": [
+    "markdown",
+    "milkdown",
+    "mermaid",
+    "drawio",
+    "wysiwyg"
+  ],
+  "activationEvents": [
+    "onCustomEditor:renderedMarkdown.editor",
+    "onCommand:renderedMarkdown.openEditor",
+    "onCommand:renderedMarkdown.openDrawioFile"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "renderedMarkdown.editor",
+        "displayName": "MarkCanvas",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
+    "commands": [
+      {
+        "command": "renderedMarkdown.openEditor",
+        "title": "Open in MarkCanvas",
+        "category": "MarkCanvas"
+      },
+      {
+        "command": "renderedMarkdown.openDrawioFile",
+        "title": "Open Draw.io File",
+        "category": "MarkCanvas"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "renderedMarkdown.openEditor",
+          "group": "navigation",
+          "when": "resourceExtname == .md"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "renderedMarkdown.openEditor",
+          "group": "navigation",
+          "when": "resourceExtname == .md"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "watch": "node ./scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test:roundtrip": "mocha --ui tdd test/suite/roundtrip.test.cjs",
+    "test:extension": "node ./test/run-extension-tests.cjs",
+    "test": "npm run test:roundtrip && npm run test:extension",
+    "compile": "npm run build",
+    "vscode:prepublish": "npm run build"
+  },
+  "dependencies": {
+    "@milkdown/crepe": "^7.20.0",
+    "@milkdown/kit": "^7.20.0",
+    "@milkdown/plugin-listener": "^7.20.0",
+    "mermaid": "^11.14.0",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "@types/vscode": "^1.115.0",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.10",
+    "jsdom": "^26.1.0",
+    "mocha": "^11.7.5",
+    "typescript": "^5.9.3"
+  }
+}

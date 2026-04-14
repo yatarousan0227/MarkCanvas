@@ -1,0 +1,250 @@
+:root {
+  color-scheme: light dark;
+  --rm-font-latin:
+    "Helvetica Neue",
+    "Segoe UI",
+    "Noto Sans",
+    "Liberation Sans",
+    Arial,
+    sans-serif;
+  --rm-font-cjk:
+    "Hiragino Sans",
+    "Yu Gothic UI",
+    "Yu Gothic",
+    "Meiryo",
+    "Noto Sans CJK JP",
+    "Noto Sans JP",
+    sans-serif;
+  --rm-font-ui: var(--rm-font-latin), var(--rm-font-cjk);
+  --rm-font-code:
+    "SFMono-Regular",
+    "Cascadia Code",
+    "DejaVu Sans Mono",
+    "Liberation Mono",
+    "Consolas",
+    "Menlo",
+    "Monaco",
+    monospace;
+  font-family: var(--rm-font-ui);
+}
+
+:root,
+body[data-preview-theme='system'] {
+  --rm-bg: var(--vscode-editor-background);
+  --rm-fg: var(--vscode-editor-foreground);
+  --rm-surface: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  --rm-surface-low: color-mix(in srgb, var(--vscode-editor-background) 82%, var(--vscode-sideBar-background) 18%);
+  --rm-muted: var(--vscode-descriptionForeground);
+  --rm-outline: var(--vscode-panel-border);
+  --rm-primary: var(--vscode-textLink-foreground);
+  --rm-secondary-bg: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+  --rm-secondary-fg: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+  --rm-primary-bg: var(--vscode-button-background);
+  --rm-primary-fg: var(--vscode-button-foreground);
+  --rm-hover: var(--vscode-list-hoverBackground);
+  --rm-selected: var(--vscode-list-activeSelectionBackground);
+  --rm-inline-area: var(--vscode-editorInlayHint-background, rgb(128 128 128 / 0.12));
+  --rm-error: var(--vscode-errorForeground);
+}
+
+body[data-preview-theme='light'] {
+  --rm-bg: #f7f7f9;
+  --rm-fg: #20242b;
+  --rm-surface: #ffffff;
+  --rm-surface-low: #eef1f5;
+  --rm-muted: #5f6b7a;
+  --rm-outline: #c9d1db;
+  --rm-primary: #0b57d0;
+  --rm-secondary-bg: #edf2ff;
+  --rm-secondary-fg: #183153;
+  --rm-primary-bg: #0b57d0;
+  --rm-primary-fg: #ffffff;
+  --rm-hover: rgb(11 87 208 / 0.08);
+  --rm-selected: rgb(11 87 208 / 0.16);
+  --rm-inline-area: rgb(11 87 208 / 0.08);
+  --rm-error: #b42318;
+}
+
+body[data-preview-theme='dark'] {
+  --rm-bg: #181a1f;
+  --rm-fg: #eef2f7;
+  --rm-surface: #23262d;
+  --rm-surface-low: #2c3139;
+  --rm-muted: #aeb8c5;
+  --rm-outline: #454b57;
+  --rm-primary: #8ab4ff;
+  --rm-secondary-bg: #2a3240;
+  --rm-secondary-fg: #eef2f7;
+  --rm-primary-bg: #8ab4ff;
+  --rm-primary-fg: #10223a;
+  --rm-hover: rgb(138 180 255 / 0.12);
+  --rm-selected: rgb(138 180 255 / 0.18);
+  --rm-inline-area: rgb(138 180 255 / 0.1);
+  --rm-error: #ff9b8e;
+}
+
+body {
+  margin: 0;
+  background: var(--rm-bg);
+  color: var(--rm-fg);
+}
+
+#app {
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.milkdown {
+  --crepe-color-background: var(--rm-bg);
+  --crepe-color-on-background: var(--rm-fg);
+  --crepe-color-surface: var(--rm-surface);
+  --crepe-color-surface-low: var(--rm-surface-low);
+  --crepe-color-on-surface: var(--rm-fg);
+  --crepe-color-on-surface-variant: var(--rm-muted);
+  --crepe-color-outline: var(--rm-outline);
+  --crepe-color-primary: var(--rm-primary);
+  --crepe-color-secondary: var(--rm-secondary-bg);
+  --crepe-color-on-secondary: var(--rm-secondary-fg);
+  --crepe-color-inverse: var(--rm-primary-bg);
+  --crepe-color-on-inverse: var(--rm-primary-fg);
+  --crepe-color-inline-code: var(--rm-fg);
+  --crepe-color-error: var(--rm-error);
+  --crepe-color-hover: var(--rm-hover);
+  --crepe-color-selected: var(--rm-selected);
+  --crepe-color-inline-area: var(--rm-inline-area);
+  --crepe-font-title: var(--rm-font-ui);
+  --crepe-font-default: var(--rm-font-ui);
+  --crepe-font-code: var(--rm-font-code);
+}
+
+.milkdown-editor {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.milkdown .milkdown-top-bar {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.milkdown .milkdown-top-bar .top-bar-inner {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.milkdown .milkdown-top-bar .preview-theme-slot {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.milkdown .milkdown-top-bar .preview-theme-divider {
+  margin-left: 0;
+}
+
+button {
+  border: 1px solid var(--rm-outline);
+  background: var(--rm-secondary-bg);
+  color: var(--rm-secondary-fg);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.milkdown .milkdown-top-bar .preview-theme-selector .top-bar-heading-label {
+  min-width: 72px;
+}
+
+.milkdown .milkdown-top-bar .preview-theme-selector .top-bar-heading-option.is-active {
+  font-weight: 600;
+  color: var(--crepe-color-primary);
+}
+
+.preview {
+  background: var(--rm-surface);
+  color: var(--rm-fg);
+  border: 1px solid var(--rm-outline);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.preview svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-preview.is-loading {
+  min-height: 96px;
+}
+
+.preview .labelBox,
+.preview .nodeLabel,
+.preview .edgeLabel,
+.preview .cluster-label,
+.preview text {
+  color: var(--rm-fg);
+  fill: var(--rm-fg);
+}
+
+body[data-preview-theme='light'] .milkdown .ProseMirror blockquote {
+  color: var(--rm-muted);
+  background: transparent;
+}
+
+body[data-preview-theme='light'] .milkdown .ProseMirror blockquote::before {
+  background: color-mix(in srgb, var(--rm-primary) 20%, var(--rm-outline));
+}
+
+body[data-preview-theme='light'] .milkdown .ProseMirror blockquote p {
+  color: inherit;
+}
+
+.milkdown .milkdown-image-block .image-wrapper .operation > .operation-item.drawio-open-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 4px;
+  cursor: pointer;
+  background: var(--crepe-color-inverse);
+  color: var(--crepe-color-on-inverse);
+}
+
+.milkdown .milkdown-image-block .image-wrapper .operation > .operation-item.drawio-open-action svg {
+  width: 18px;
+  height: 18px;
+}
+
+.drawio-inline-action {
+  margin-top: 8px;
+}
+
+.mermaid-error-banner {
+  color: var(--rm-error);
+  background: color-mix(in srgb, var(--rm-error) 12%, var(--rm-surface));
+  border: 1px solid color-mix(in srgb, var(--rm-error) 35%, transparent);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.fatal-error {
+  max-width: 920px;
+  margin: 0 auto;
+  border: 1px solid color-mix(in srgb, var(--rm-error) 35%, transparent);
+  border-radius: 12px;
+  padding: 20px;
+  background: color-mix(in srgb, var(--rm-error) 10%, var(--rm-surface));
+}
+
+.fatal-error h2 {
+  margin-top: 0;
+}
+
+.fatal-error pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 12px/1.5 var(--rm-font-code);
+}
