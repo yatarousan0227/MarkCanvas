@@ -18,6 +18,19 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+function getVisibleAreaRatio(rect: DOMRect): number {
+  const visibleWidth = Math.max(0, Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0));
+  const visibleHeight = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+  const visibleArea = visibleWidth * visibleHeight;
+  const totalArea = rect.width * rect.height;
+
+  if (totalArea <= 0) {
+    return 0;
+  }
+
+  return visibleArea / totalArea;
+}
+
 function createOverlayButton(
   target: string,
   postMessage: (message: WebviewToExtensionMessage) => void,
@@ -75,16 +88,24 @@ export function createDrawioOverlayManager(options: DrawioOverlayManagerOptions)
         continue;
       }
 
+      if (getVisibleAreaRatio(rect) < 0.5) {
+        entry.button.hidden = true;
+        continue;
+      }
+
       entry.button.hidden = false;
       const buttonWidth = entry.button.offsetWidth || 30;
       const buttonHeight = entry.button.offsetHeight || 30;
+      const anchorLeft = rect.right - buttonWidth - viewportMargin;
+      const anchorTop = rect.top + viewportMargin;
+
       const left = clamp(
-        rect.right - buttonWidth - viewportMargin,
+        anchorLeft,
         viewportMargin,
         Math.max(viewportMargin, window.innerWidth - buttonWidth - viewportMargin),
       );
       const top = clamp(
-        rect.top + viewportMargin,
+        anchorTop,
         viewportMargin,
         Math.max(viewportMargin, window.innerHeight - buttonHeight - viewportMargin),
       );

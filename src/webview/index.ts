@@ -242,6 +242,41 @@ function configureMarkdownSerialization(): void {
   });
 }
 
+function insertMarkdownAtSelection(markdown: string): void {
+  if (!editorInstance) {
+    return;
+  }
+
+  suppressUpdates = true;
+  try {
+    editorInstance.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      const parser = ctx.get(parserCtx);
+      const doc = parser(markdown);
+      if (!doc) {
+        return;
+      }
+
+      const contentSlice = view.state.selection.content();
+      const replacement = new Slice(doc.content, contentSlice.openStart, contentSlice.openEnd);
+      view.dispatch(view.state.tr.replaceSelection(replacement).scrollIntoView());
+    });
+  } finally {
+    suppressUpdates = false;
+  }
+
+  if (!crepe) {
+    return;
+  }
+
+  const nextMarkdown = reconstructMarkdownForSave(crepe.getMarkdown());
+  clearUserEditIntent();
+  sendMarkdownUpdate(nextMarkdown);
+  queueMicrotask(() => {
+    decorateImages();
+  });
+}
+
 function sendMarkdownUpdate(markdown: string): void {
   if (!payload) {
     return;
@@ -360,6 +395,11 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
           onUserEditIntent: () => {
             markUserEditIntent();
           },
+          onRequestImageInsertion: () => {
+            postMessage({
+              type: 'requestImageInsertion',
+            });
+          },
         }),
         [Crepe.Feature.CodeMirror]: {
           languages: codeBlockLanguages,
@@ -434,6 +474,21 @@ function handleMessage(message: ExtensionToWebviewMessage): void {
       return;
     case 'openResourceResult':
       if (!message.ok && message.error) {
+        postMessage({
+          type: 'reportRenderError',
+          source: 'milkdown',
+          message: message.error,
+        });
+      }
+      return;
+    case 'insertImageResult':
+      if (message.ok && message.markdown) {
+        insertMarkdownAtSelection(message.markdown);
+        return;
+      }
+
+      clearUserEditIntent();
+      if (message.error) {
         postMessage({
           type: 'reportRenderError',
           source: 'milkdown',

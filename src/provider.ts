@@ -62,7 +62,6 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
 
       if (state.applyingVersion === event.document.version) {
         state.applyingVersion = null;
-        return;
       }
 
       await sendDocument('replaceDocument');
@@ -88,6 +87,9 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
           return;
         case 'openDrawioFile':
           await this.openResource(state, message.target);
+          return;
+        case 'requestImageInsertion':
+          await this.promptForImageInsertion(state);
           return;
         case 'reportRenderError':
           console.warn(`[markcanvas] ${message.source}: ${message.message}`);
@@ -317,6 +319,57 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
       target,
       error,
     });
+  }
+
+  private async promptForImageInsertion(state: PanelState): Promise<void> {
+    try {
+      const defaultUri = vscode.Uri.joinPath(
+        state.document.uri,
+        '..',
+      );
+      const selection = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        canSelectFiles: true,
+        canSelectFolders: false,
+        defaultUri,
+        filters: {
+          Images: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'],
+        },
+        openLabel: 'Insert Image',
+      });
+
+      const imageUri = selection?.[0];
+      if (!imageUri) {
+        this.postMessage(state, {
+          type: 'insertImageResult',
+          ok: false,
+          cancelled: true,
+        });
+        return;
+      }
+
+      this.postMessage(state, {
+        type: 'insertImageResult',
+        ok: true,
+        markdown: this.buildMarkdownImage(state.document.uri, imageUri),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to select image.';
+      this.postMessage(state, {
+        type: 'insertImageResult',
+        ok: false,
+        error: message,
+      });
+    }
+  }
+
+  private buildMarkdownImage(documentUri: vscode.Uri, imageUri: vscode.Uri): string {
+    const documentDirectory = path.posix.dirname(documentUri.path);
+    const relativePath = path.posix.relative(documentDirectory, imageUri.path) || path.posix.basename(imageUri.path);
+    const altText = path.posix.basename(imageUri.path, path.posix.extname(imageUri.path));
+    const destination = /[\s()]/.test(relativePath) ? `<${relativePath}>` : relativePath;
+    const escapedAltText = altText.replace(/[\\[\]]/g, '\\$&');
+    return `![${escapedAltText}](${destination})`;
   }
 
   private getThemeKind(theme: vscode.ColorTheme): 'light' | 'dark' | 'hc' {

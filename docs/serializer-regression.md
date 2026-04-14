@@ -75,6 +75,8 @@ Do not rewrite `-` list markers, `draw.io`, or `CODE_OF_CONDUCT.md`.
 
 Keep README.md, CHANGELOG.md, and package.json readable next to v1.2.3 and draw.io.
 
+![plain](fixtures/plain.svg)
+
 ## Markdown-Adjacent Prose
 
 This line contains brackets [like this], parentheses (like this), and file.name.md together.

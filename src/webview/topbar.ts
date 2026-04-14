@@ -10,7 +10,6 @@ import {
   headingSchema,
   hrSchema,
   inlineCodeSchema,
-  insertImageCommand,
   isMarkSelectedCommand,
   liftFirstListItemCommand,
   liftListItemCommand,
@@ -389,6 +388,7 @@ function insertBlockMath(ctx: Ctx): void {
 
 type TopBarConfigOptions = {
   onUserEditIntent?: () => void;
+  onRequestImageInsertion?: () => void;
 };
 
 export function createTopBarConfig(options: TopBarConfigOptions = {}) {
@@ -507,8 +507,8 @@ export function createTopBarConfig(options: TopBarConfigOptions = {}) {
       insertGroup.addItem('image', {
         icon: imageIcon,
         active: () => false,
-        onRun: runWithUserEditIntent((ctx: Ctx) => {
-          ctx.get(commandsCtx).call(insertImageCommand.key);
+        onRun: runWithUserEditIntent(() => {
+          options.onRequestImageInsertion?.();
         }),
       });
       insertGroup.addItem('table', {

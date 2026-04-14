@@ -27,6 +27,13 @@ export type ExtensionToWebviewMessage =
       ok: boolean;
       target: string | null;
       error?: string;
+    }
+  | {
+      type: 'insertImageResult';
+      ok: boolean;
+      cancelled?: boolean;
+      markdown?: string;
+      error?: string;
     };
 
 export type WebviewToExtensionMessage =
@@ -38,6 +45,9 @@ export type WebviewToExtensionMessage =
   | {
       type: 'openDrawioFile';
       target: string;
+    }
+  | {
+      type: 'requestImageInsertion';
     }
   | {
       type: 'reportRenderError';

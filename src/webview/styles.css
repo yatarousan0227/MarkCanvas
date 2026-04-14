@@ -126,6 +126,7 @@ body {
 .milkdown .milkdown-top-bar {
   justify-content: space-between;
   gap: 8px;
+  z-index: 11;
 }
 
 .milkdown .milkdown-top-bar .top-bar-inner {
@@ -257,7 +258,7 @@ body[data-preview-theme='light'] .milkdown .ProseMirror blockquote p {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 20;
+  z-index: 9;
 }
 
 .markcanvas-drawio-overlay-button {
@@ -273,6 +274,10 @@ body[data-preview-theme='light'] .milkdown .ProseMirror blockquote p {
   color: var(--crepe-color-on-inverse);
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.24);
   pointer-events: auto;
+}
+
+.markcanvas-drawio-overlay-button[hidden] {
+  display: none;
 }
 
 .markcanvas-drawio-overlay-button svg {

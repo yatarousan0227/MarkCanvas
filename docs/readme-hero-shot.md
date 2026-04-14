@@ -13,13 +13,10 @@ MarkCanvas turns plain Markdown into a visual working surface for specs, diagram
 
 ## Live Snapshot
 
-* Rendered Markdown editing
-
-* Mermaid preview
-
-* Math blocks
-
-* Round-trip safe source
+- Rendered Markdown editing
+- Mermaid preview
+- Math blocks
+- Round-trip safe source
 
 | Module  | Status | Signal    |
 | ------- | ------ | --------- |
@@ -27,8 +24,6 @@ MarkCanvas turns plain Markdown into a visual working surface for specs, diagram
 | Mermaid | Online | Rendering |
 | Math    | Online | Typeset   |
 | Assets  | Online | Linked    |
-
-<br />
 
 Inline math: $E = mc^2$ and $S = \sum_{i=1}^{n} w_i x_i$
 
@@ -46,4 +41,3 @@ flowchart LR
   PREVIEW -->|"no"| REFINE["Refine text, table, and diagram"]
   REFINE --> SHAPE
 ```
-
