@@ -14,6 +14,7 @@ import type {
   WebviewToExtensionMessage,
 } from '../types';
 import { decorateDrawioImages } from './drawio';
+import { renderHtmlPreviews } from './html-preview';
 import { createMermaidPreviewManager } from './mermaid-preview';
 import {
   createThemeControlsManager,
@@ -121,6 +122,10 @@ function renderFatalError(message: string): void {
 }
 
 function decorateImages(): void {
+  renderHtmlPreviews({
+    resourceCache,
+    resolvedResourceCache,
+  });
   decorateDrawioImages({
     resourceCache,
     resolvedResourceCache,

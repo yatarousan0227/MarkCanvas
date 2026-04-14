@@ -171,6 +171,14 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
       }
     });
 
+    visit(tree, 'html', (node: { value?: string }) => {
+      if (typeof node.value !== 'string') {
+        return;
+      }
+
+      urls.push(...this.extractHtmlResourceUrls(node.value));
+    });
+
     for (const original of urls) {
       if (seen.has(original)) {
         continue;
@@ -182,6 +190,20 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
     }
 
     return resources;
+  }
+
+  private extractHtmlResourceUrls(html: string): string[] {
+    const urls: string[] = [];
+    const matches = html.matchAll(/<(?:img|source)\b[^>]*\bsrc\s*=\s*(?:(['"])(.*?)\1|([^\s>]+))/gi);
+
+    for (const match of matches) {
+      const url = (match[2] ?? match[3])?.trim();
+      if (url) {
+        urls.push(url);
+      }
+    }
+
+    return urls;
   }
 
   private async resolveResource(
@@ -199,7 +221,8 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
       };
     }
 
-    const targetUri = this.resolveWorkspaceUri(document.uri, original);
+    const [resourcePath, suffix] = this.splitResourceReference(original);
+    const targetUri = this.resolveWorkspaceUri(document.uri, resourcePath);
     if (!targetUri) {
       return {
         original,
@@ -232,7 +255,7 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
 
       return {
         original,
-        resolved: webview.asWebviewUri(targetUri).toString(),
+        resolved: `${webview.asWebviewUri(targetUri).toString()}${suffix}`,
         exists,
         isDrawio,
         openTarget: isDrawio ? targetUri.toString() : null,
@@ -246,6 +269,16 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
         openTarget: null,
       };
     }
+  }
+
+  private splitResourceReference(raw: string): [string, string] {
+    const hashIndex = raw.indexOf('#');
+    const queryIndex = raw.indexOf('?');
+    const cutIndex = [hashIndex, queryIndex]
+      .filter((index) => index >= 0)
+      .reduce((min, index) => Math.min(min, index), raw.length);
+
+    return [raw.slice(0, cutIndex), raw.slice(cutIndex)];
   }
 
   private resolveWorkspaceUri(documentUri: vscode.Uri, raw: string): vscode.Uri | null {

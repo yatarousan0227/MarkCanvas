@@ -176,6 +176,57 @@ button {
   height: auto;
 }
 
+.milkdown .ProseMirror .markcanvas-html-node {
+  white-space: normal;
+}
+
+.milkdown .ProseMirror .markcanvas-html-preview {
+  display: inline-block;
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--rm-outline) 72%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--rm-surface) 92%, transparent);
+  padding: 10px 12px;
+  vertical-align: top;
+  overflow-x: auto;
+}
+
+.milkdown .ProseMirror .markcanvas-html-preview.is-block {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.milkdown .ProseMirror .markcanvas-html-preview.is-fallback {
+  font: 12px/1.6 var(--rm-font-code);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.milkdown .ProseMirror .markcanvas-html-preview :where(h1, h2, h3, h4, h5, h6, p, ul, ol, pre, blockquote, table, details, figure) {
+  margin-top: 0;
+}
+
+.milkdown .ProseMirror .markcanvas-html-preview :where(h1, h2, h3, h4, h5, h6, p, ul, ol, pre, blockquote, table, details, figure):last-child {
+  margin-bottom: 0;
+}
+
+.milkdown .ProseMirror .markcanvas-html-preview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.milkdown .ProseMirror .markcanvas-html-preview table {
+  border-collapse: collapse;
+}
+
+.milkdown .ProseMirror .markcanvas-html-preview th,
+.milkdown .ProseMirror .markcanvas-html-preview td {
+  border: 1px solid var(--rm-outline);
+  padding: 6px 10px;
+}
+
 .mermaid-preview.is-loading {
   min-height: 96px;
 }
