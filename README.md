@@ -1,5 +1,7 @@
 # MarkCanvas
 
+![MarkCanvas top image](images/top.png)
+
 MarkCanvas is an experimental VS Code custom editor extension for editing Markdown in a rendered, canvas-like experience.
 It uses Milkdown/Crepe for WYSIWYG editing, renders Mermaid code fences as previews, and recognizes linked draw.io SVG assets so you can jump back to the source diagram file.
 
