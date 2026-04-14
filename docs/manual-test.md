@@ -11,6 +11,7 @@
 
 数式だけを確認したい場合は `docs/math-sample.md` を開いて同じ手順で確認します。
 派手なデモ表示を確認したい場合は `docs/demo-showcase.md` を開いてください。
+serializer 周りの回帰だけを確認したい場合は `docs/serializer-regression.md` を開いてください。
 
 ## Milkdown Basics
 

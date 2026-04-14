@@ -1,5 +1,4 @@
 import type { Ctx } from '@milkdown/kit/ctx';
-import { imageBlockSchema } from '@milkdown/kit/component/image-block';
 import { toggleLinkCommand } from '@milkdown/kit/component/link-tooltip';
 import { commandsCtx, editorViewCtx, parserCtx } from '@milkdown/kit/core';
 import {
@@ -11,6 +10,7 @@ import {
   headingSchema,
   hrSchema,
   inlineCodeSchema,
+  insertImageCommand,
   isMarkSelectedCommand,
   liftFirstListItemCommand,
   liftListItemCommand,
@@ -387,7 +387,16 @@ function insertBlockMath(ctx: Ctx): void {
   replaceSelectionWithMarkdown(ctx, '$$\n\n$$', false);
 }
 
-export function createTopBarConfig() {
+type TopBarConfigOptions = {
+  onUserEditIntent?: () => void;
+};
+
+export function createTopBarConfig(options: TopBarConfigOptions = {}) {
+  const runWithUserEditIntent = <T extends unknown[]>(action: (...args: T) => void) => (...args: T) => {
+    options.onUserEditIntent?.();
+    action(...args);
+  };
+
   return {
     buildTopBar: (builder: TopBarBuilder) => {
       builder.clear();
@@ -400,9 +409,9 @@ export function createTopBarConfig() {
           activeLabel: (ctx: Ctx) => getHeadingLabel(ctx),
           options: headingOptions.map((option) => ({
             label: option.label,
-            onSelect: (ctx: Ctx) => {
+            onSelect: runWithUserEditIntent((ctx: Ctx) => {
               setHeadingLevel(ctx, option.level);
-            },
+            }),
           })),
         },
       });
@@ -412,28 +421,28 @@ export function createTopBarConfig() {
         .addItem('bold', {
           icon: boldIcon,
           active: (ctx: Ctx) => isMarkActive(ctx, strongSchema.type(ctx)),
-          onRun: (ctx: Ctx) => {
+          onRun: runWithUserEditIntent((ctx: Ctx) => {
             ctx.get(commandsCtx).call(toggleStrongCommand.key);
-          },
+          }),
         })
         .addItem('italic', {
           icon: italicIcon,
           active: (ctx: Ctx) => isMarkActive(ctx, emphasisSchema.type(ctx)),
-          onRun: (ctx: Ctx) => {
+          onRun: runWithUserEditIntent((ctx: Ctx) => {
             ctx.get(commandsCtx).call(toggleEmphasisCommand.key);
-          },
+          }),
         })
         .addItem('strikethrough', {
           icon: strikethroughIcon,
           active: (ctx: Ctx) => isMarkActive(ctx, strikethroughSchema.type(ctx)),
-          onRun: (ctx: Ctx) => {
+          onRun: runWithUserEditIntent((ctx: Ctx) => {
             ctx.get(commandsCtx).call(toggleStrikethroughCommand.key);
-          },
+          }),
         })
         .addItem('code', {
           icon: codeIcon,
           active: (ctx: Ctx) => isMarkActive(ctx, inlineCodeSchema.type(ctx)),
-          onRun: (ctx: Ctx) => {
+          onRun: runWithUserEditIntent((ctx: Ctx) => {
             const view = ctx.get(editorViewCtx);
             const markType = inlineCodeSchema.type(ctx);
             if (view.state.selection.empty) {
@@ -446,14 +455,14 @@ export function createTopBarConfig() {
             }
 
             ctx.get(commandsCtx).call(toggleInlineCodeCommand.key);
-          },
+          }),
         })
         .addItem('inline-math', {
           icon: mathIcon,
           active: (ctx: Ctx) => isInlineMathSelected(ctx),
-          onRun: (ctx: Ctx) => {
+          onRun: runWithUserEditIntent((ctx: Ctx) => {
             toggleInlineMath(ctx);
-          },
+          }),
         });
 
       builder
@@ -461,30 +470,30 @@ export function createTopBarConfig() {
         .addItem('bullet-list', {
           icon: bulletListIcon,
           active: (ctx: Ctx) => getSelectionBlockContext(ctx).listKind === 'bullet-list',
-          onRun: (ctx: Ctx) => {
+          onRun: runWithUserEditIntent((ctx: Ctx) => {
             toggleList(ctx, 'bullet-list');
-          },
+          }),
         })
         .addItem('ordered-list', {
           icon: orderedListIcon,
           active: (ctx: Ctx) => getSelectionBlockContext(ctx).listKind === 'ordered-list',
-          onRun: (ctx: Ctx) => {
+          onRun: runWithUserEditIntent((ctx: Ctx) => {
             toggleList(ctx, 'ordered-list');
-          },
+          }),
         })
         .addItem('task-list', {
           icon: todoListIcon,
           active: (ctx: Ctx) => getSelectionBlockContext(ctx).listKind === 'task-list',
-          onRun: (ctx: Ctx) => {
+          onRun: runWithUserEditIntent((ctx: Ctx) => {
             toggleList(ctx, 'task-list');
-          },
+          }),
         });
 
       const insertGroup = builder.addGroup('insert', 'Insert');
       insertGroup.addItem('link', {
         icon: linkIcon,
         active: (ctx: Ctx) => isMarkActive(ctx, linkSchema.type(ctx)),
-        onRun: (ctx: Ctx) => {
+        onRun: runWithUserEditIntent((ctx: Ctx) => {
           const view = ctx.get(editorViewCtx);
           const markType = linkSchema.type(ctx);
           if (view.state.selection.empty && isMarkActive(ctx, markType)) {
@@ -493,42 +502,40 @@ export function createTopBarConfig() {
           }
 
           ctx.get(commandsCtx).call(toggleLinkCommand.key);
-        },
+        }),
       });
       insertGroup.addItem('image', {
         icon: imageIcon,
         active: () => false,
-        onRun: (ctx: Ctx) => {
-          ctx.get(commandsCtx).call(addBlockTypeCommand.key, {
-            nodeType: imageBlockSchema.type(ctx),
-          });
-        },
+        onRun: runWithUserEditIntent((ctx: Ctx) => {
+          ctx.get(commandsCtx).call(insertImageCommand.key);
+        }),
       });
       insertGroup.addItem('table', {
         icon: tableIcon,
         active: () => false,
-        onRun: (ctx: Ctx) => {
+        onRun: runWithUserEditIntent((ctx: Ctx) => {
           const view = ctx.get(editorViewCtx);
           const { from } = view.state.selection;
           const commands = ctx.get(commandsCtx);
           commands.call(addBlockTypeCommand.key, { nodeType: createTable(ctx, 3, 3) });
           commands.call(selectTextNearPosCommand.key, { pos: from });
-        },
+        }),
       });
       insertGroup.addItem('math-block', {
         icon: mathIcon,
         active: () => false,
-        onRun: (ctx: Ctx) => {
+        onRun: runWithUserEditIntent((ctx: Ctx) => {
           insertBlockMath(ctx);
-        },
+        }),
       });
 
       builder.addGroup('block', 'Block').addItem('code-block', {
         icon: codeBlockIcon,
         active: (ctx: Ctx) => getSelectionBlockContext(ctx).inCodeBlock === true,
-        onRun: (ctx: Ctx) => {
+        onRun: runWithUserEditIntent((ctx: Ctx) => {
           toggleCodeBlock(ctx);
-        },
+        }),
       });
 
       builder
@@ -536,16 +543,16 @@ export function createTopBarConfig() {
         .addItem('quote', {
           icon: quoteIcon,
           active: (ctx: Ctx) => getSelectionBlockContext(ctx).inQuote === true,
-          onRun: (ctx: Ctx) => {
+          onRun: runWithUserEditIntent((ctx: Ctx) => {
             toggleBlockquote(ctx);
-          },
+          }),
         })
         .addItem('hr', {
           icon: dividerIcon,
           active: () => false,
-          onRun: (ctx: Ctx) => {
+          onRun: runWithUserEditIntent((ctx: Ctx) => {
             ctx.get(commandsCtx).call(addBlockTypeCommand.key, { nodeType: hrSchema.type(ctx) });
-          },
+          }),
         });
     },
   };

@@ -253,24 +253,31 @@ body[data-preview-theme='light'] .milkdown .ProseMirror blockquote p {
   color: inherit;
 }
 
-.milkdown .milkdown-image-block .image-wrapper .operation > .operation-item.drawio-open-action {
+.markcanvas-drawio-overlay-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.markcanvas-drawio-overlay-button {
+  position: fixed;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 0;
   padding: 4px;
+  border-radius: 999px;
   cursor: pointer;
   background: var(--crepe-color-inverse);
   color: var(--crepe-color-on-inverse);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.24);
+  pointer-events: auto;
 }
 
-.milkdown .milkdown-image-block .image-wrapper .operation > .operation-item.drawio-open-action svg {
+.markcanvas-drawio-overlay-button svg {
   width: 18px;
   height: 18px;
-}
-
-.drawio-inline-action {
-  margin-top: 8px;
 }
 
 .mermaid-error-banner {

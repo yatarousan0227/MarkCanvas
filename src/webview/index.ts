@@ -4,7 +4,7 @@ import './styles.css';
 import { LanguageDescription } from '@codemirror/language';
 import { languages as defaultCodeBlockLanguages } from '@codemirror/language-data';
 import type { Editor } from '@milkdown/kit/core';
-import { editorViewCtx, parserCtx } from '@milkdown/kit/core';
+import { editorViewCtx, parserCtx, remarkStringifyOptionsCtx } from '@milkdown/kit/core';
 import { Slice } from '@milkdown/kit/prose/model';
 import { Crepe } from '@milkdown/crepe';
 import type {
@@ -13,8 +13,9 @@ import type {
   ResourceDescriptor,
   WebviewToExtensionMessage,
 } from '../types';
-import { decorateDrawioImages } from './drawio';
+import { createDrawioOverlayManager } from './drawio';
 import { renderHtmlPreviews } from './html-preview';
+import { createMarkdownSnapshot, reconcileMarkdownSnapshots, type MarkdownSnapshot } from './markdown-reconciler';
 import { createMermaidPreviewManager } from './mermaid-preview';
 import {
   createThemeControlsManager,
@@ -44,6 +45,8 @@ let markdownUpdateInFlight = false;
 let queuedMarkdownUpdate: string | null = null;
 let editorInstance: Editor | null = null;
 let crepe: Crepe | null = null;
+let baselineMarkdownSnapshot: MarkdownSnapshot | null = null;
+let pendingUserEditIntent = false;
 
 const resourceCache = new Map<string, ResourceDescriptor>();
 const resolvedResourceCache = new Map<string, ResourceDescriptor>();
@@ -92,6 +95,10 @@ function postMessage(message: WebviewToExtensionMessage): void {
   vscode.postMessage(message);
 }
 
+const drawioOverlay = createDrawioOverlayManager({
+  postMessage,
+});
+
 function persistState(): void {
   vscode.setState({ payload, previewTheme });
 }
@@ -126,10 +133,112 @@ function decorateImages(): void {
     resourceCache,
     resolvedResourceCache,
   });
-  decorateDrawioImages({
+  drawioOverlay.render({
     resourceCache,
     resolvedResourceCache,
-    postMessage,
+  });
+}
+
+function markUserEditIntent(): void {
+  pendingUserEditIntent = true;
+}
+
+function clearUserEditIntent(): void {
+  pendingUserEditIntent = false;
+}
+
+function consumeUserEditIntent(): boolean {
+  const shouldApply = pendingUserEditIntent;
+  pendingUserEditIntent = false;
+  return shouldApply;
+}
+
+function shouldTreatKeydownAsEditIntent(event: KeyboardEvent): boolean {
+  if (event.isComposing) {
+    return true;
+  }
+
+  if (event.key === 'Enter' || event.key === 'Backspace' || event.key === 'Delete' || event.key === 'Tab') {
+    return true;
+  }
+
+  if ((event.metaKey || event.ctrlKey) && /^[a-z0-9]$/i.test(event.key)) {
+    return true;
+  }
+
+  return false;
+}
+
+function installUserEditIntentTracking(): void {
+  const root = document.getElementById('app');
+  if (!root) {
+    return;
+  }
+
+  root.addEventListener('beforeinput', () => {
+    markUserEditIntent();
+  }, true);
+  root.addEventListener('paste', () => {
+    markUserEditIntent();
+  }, true);
+  root.addEventListener('cut', () => {
+    markUserEditIntent();
+  }, true);
+  root.addEventListener('drop', () => {
+    markUserEditIntent();
+  }, true);
+  root.addEventListener('keydown', (event) => {
+    if (shouldTreatKeydownAsEditIntent(event)) {
+      markUserEditIntent();
+    }
+  }, true);
+}
+
+function preserveLiteralText(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9./_-]*$/.test(value);
+}
+
+function normalizeEscapedText(value: string): string {
+  return value
+    .replace(/\\\./g, '.')
+    .replace(/([A-Za-z0-9./-])\\_([A-Za-z0-9./-])/g, '$1_$2')
+    .replace(/([A-Za-z0-9])\\\*([A-Za-z0-9])/g, '$1*$2')
+    .replace(/\\\[([^[\]\r\n]+)](?!\(|\[)/g, '[$1]');
+}
+
+function configureMarkdownSerialization(): void {
+  if (!crepe) {
+    return;
+  }
+
+  crepe.editor.config((ctx) => {
+    ctx.update(remarkStringifyOptionsCtx, (value) => ({
+      ...value,
+      bullet: '-' as const,
+      join: [
+        (left, right, parent) => {
+          if (parent && (parent.type === 'list' || parent.type === 'listItem')) {
+            return 0;
+          }
+
+          return undefined;
+        },
+      ],
+      handlers: {
+        ...value.handlers,
+        text: (node, _, state, info) => {
+          const text = typeof node.value === 'string' ? node.value : '';
+          if (preserveLiteralText(text) || /^[^*_\\]*\s+$/.test(text)) {
+            return text;
+          }
+
+          return normalizeEscapedText(state.safe(text, {
+            ...info,
+            encode: [],
+          }));
+        },
+      },
+    }));
   });
 }
 
@@ -156,10 +265,27 @@ function sendMarkdownUpdate(markdown: string): void {
   });
 }
 
+function reconstructMarkdownForSave(markdown: string): string {
+  if (!baselineMarkdownSnapshot) {
+    return markdown;
+  }
+
+  try {
+    return reconcileMarkdownSnapshots(
+      baselineMarkdownSnapshot,
+      createMarkdownSnapshot(markdown),
+    );
+  } catch {
+    return markdown;
+  }
+}
+
 function applyPayload(next: DocumentPayload): void {
   payload = next;
   currentVersion = next.version;
   markdownUpdateInFlight = false;
+  clearUserEditIntent();
+  baselineMarkdownSnapshot = createMarkdownSnapshot(next.markdown);
   resourceCache.clear();
   resolvedResourceCache.clear();
 
@@ -198,6 +324,7 @@ function setEditorMarkdown(markdown: string, force = false): void {
   }
 
   suppressUpdates = true;
+  clearUserEditIntent();
   try {
     editorInstance.action((ctx) => {
       const view = ctx.get(editorViewCtx);
@@ -224,11 +351,16 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
       root: '#app',
       defaultValue: initial.markdown,
       features: {
+        [Crepe.Feature.ImageBlock]: false,
         [Crepe.Feature.Latex]: true,
         [Crepe.Feature.TopBar]: true,
       },
       featureConfigs: {
-        [Crepe.Feature.TopBar]: createTopBarConfig(),
+        [Crepe.Feature.TopBar]: createTopBarConfig({
+          onUserEditIntent: () => {
+            markUserEditIntent();
+          },
+        }),
         [Crepe.Feature.CodeMirror]: {
           languages: codeBlockLanguages,
           renderPreview: mermaidPreview.renderPreview,
@@ -241,6 +373,7 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
         },
       },
     });
+    configureMarkdownSerialization();
 
     crepe.on((api) => {
       api.markdownUpdated((_, markdown) => {
@@ -248,7 +381,11 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
           return;
         }
 
-        sendMarkdownUpdate(markdown);
+        if (!consumeUserEditIntent()) {
+          return;
+        }
+
+        sendMarkdownUpdate(reconstructMarkdownForSave(markdown));
         queueMicrotask(() => {
           decorateImages();
         });
@@ -256,6 +393,7 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
     });
 
     editorInstance = await crepe.create();
+    installUserEditIntentTracking();
     themeControls.ensureControls();
     decorateImages();
   } catch (error) {
@@ -268,6 +406,10 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
     renderFatalError(message);
   }
 }
+
+window.addEventListener('beforeunload', () => {
+  drawioOverlay.destroy();
+}, { once: true });
 
 function handleMessage(message: ExtensionToWebviewMessage): void {
   switch (message.type) {
