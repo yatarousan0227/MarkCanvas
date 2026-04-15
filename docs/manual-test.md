@@ -28,10 +28,10 @@ serializer 周りの回帰だけを確認したい場合は `docs/serializer-reg
 
 `inline code`
 
-|  name | value |
-| :---: | ----- |
-| alpha | 1     |
-|  beta | 2     |
+| name  | value | <br /> |
+| --- | ---------- | ----------------------- |
+| alpha | 1     | <br /> |
+| beta  | 2     | <br /> |
 
 [OpenAI](https://openai.com/)
 

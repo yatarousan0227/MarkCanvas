@@ -18,6 +18,8 @@ import { createDrawioOverlayManager } from './drawio';
 import { renderHtmlPreviews } from './html-preview';
 import { createMarkdownSnapshot, reconcileMarkdownSnapshots, type MarkdownSnapshot } from './markdown-reconciler';
 import { createMermaidPreviewManager } from './mermaid-preview';
+import { createTableWidthManager } from './table-width-plugin';
+import { applyTableWidthState, createTableWidthState, type TableWidthState } from './table-widths';
 import {
   createThemeControlsManager,
 } from './theme-controls';
@@ -58,6 +60,8 @@ let queuedMarkdownUpdate: string | null = null;
 let editorInstance: Editor | null = null;
 let crepe: Crepe | null = null;
 let baselineMarkdownSnapshot: MarkdownSnapshot | null = null;
+let tableWidthState: TableWidthState = createTableWidthState(payload?.markdown ?? '');
+let tableWidthManager: ReturnType<typeof createTableWidthManager> | null = null;
 let pendingUserEditIntent = false;
 let pendingInitialViewportScroll = initialState
   && Number.isFinite(initialState.viewportScrollX)
@@ -164,6 +168,11 @@ function decorateImages(): void {
   });
 }
 
+function refreshEditorDecorations(): void {
+  decorateImages();
+  tableWidthManager?.refresh();
+}
+
 function markUserEditIntent(): void {
   pendingUserEditIntent = true;
 }
@@ -200,7 +209,7 @@ function installUserEditIntentTracking(): void {
     return;
   }
 
-  const markStructuredEditIntent = (eventTarget: EventTarget | null): void => {
+  const markStructuredEditIntent = (eventTarget: EventTarget | null, prepareTableOperation = false): void => {
     if (!(eventTarget instanceof HTMLInputElement)) {
       if (!(eventTarget instanceof Element)) {
         return;
@@ -208,6 +217,13 @@ function installUserEditIntentTracking(): void {
 
       if (eventTarget.closest('.milkdown-list-item-block .label-wrapper')) {
         markUserEditIntent();
+      }
+
+      if (eventTarget.closest('.milkdown-table-block button')) {
+        markUserEditIntent();
+        if (prepareTableOperation) {
+          tableWidthManager?.prepareTableOperation(eventTarget);
+        }
       }
 
       return;
@@ -233,7 +249,7 @@ function installUserEditIntentTracking(): void {
     markUserEditIntent();
   }, true);
   root.addEventListener('pointerdown', (event) => {
-    markStructuredEditIntent(event.target);
+    markStructuredEditIntent(event.target, true);
   }, true);
   root.addEventListener('click', (event) => {
     markStructuredEditIntent(event.target);
@@ -327,7 +343,7 @@ function insertMarkdownAtSelection(markdown: string): void {
   clearUserEditIntent();
   sendMarkdownUpdate(nextMarkdown);
   queueMicrotask(() => {
-    decorateImages();
+    refreshEditorDecorations();
   });
 }
 
@@ -355,18 +371,21 @@ function sendMarkdownUpdate(markdown: string): void {
 }
 
 function reconstructMarkdownForSave(markdown: string): string {
+  let reconstructedMarkdown = markdown;
   if (!baselineMarkdownSnapshot) {
-    return markdown;
+    return applyTableWidthState(reconstructedMarkdown, tableWidthState);
   }
 
   try {
-    return reconcileMarkdownSnapshots(
+    reconstructedMarkdown = reconcileMarkdownSnapshots(
       baselineMarkdownSnapshot,
       createMarkdownSnapshot(markdown),
     );
   } catch {
-    return markdown;
+    reconstructedMarkdown = markdown;
   }
+
+  return applyTableWidthState(reconstructedMarkdown, tableWidthState);
 }
 
 function shouldSkipMarkdownReset(markdown: string, force: boolean): boolean {
@@ -421,6 +440,7 @@ function applyPayload(next: DocumentPayload): void {
   markdownUpdateInFlight = false;
   clearUserEditIntent();
   baselineMarkdownSnapshot = createMarkdownSnapshot(next.markdown);
+  tableWidthState = createTableWidthState(next.markdown);
   resourceCache.clear();
   resolvedResourceCache.clear();
 
@@ -432,6 +452,9 @@ function applyPayload(next: DocumentPayload): void {
   }
 
   persistState();
+  queueMicrotask(() => {
+    tableWidthManager?.refresh();
+  });
 
   if (queuedMarkdownUpdate && queuedMarkdownUpdate !== next.markdown) {
     const pendingMarkdown = queuedMarkdownUpdate;
@@ -533,6 +556,25 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
       },
     });
     configureMarkdownSerialization();
+    tableWidthManager = createTableWidthManager({
+      getState: () => tableWidthState,
+      dispatchResizeTransaction: () => {
+        editorInstance?.action((ctx) => {
+          const view = ctx.get(editorViewCtx);
+          view.dispatch(view.state.tr.setMeta('markcanvasTableWidthResize', true));
+        });
+      },
+      onCommit: () => {
+        if (!crepe) {
+          return;
+        }
+
+        markUserEditIntent();
+        const nextMarkdown = reconstructMarkdownForSave(crepe.getMarkdown());
+        clearUserEditIntent();
+        sendMarkdownUpdate(nextMarkdown);
+      },
+    });
 
     crepe.on((api) => {
       api.markdownUpdated((_, markdown) => {
@@ -546,7 +588,7 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
 
         sendMarkdownUpdate(reconstructMarkdownForSave(markdown));
         queueMicrotask(() => {
-          decorateImages();
+          refreshEditorDecorations();
         });
       });
     });
@@ -555,7 +597,7 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
     installUserEditIntentTracking();
     restoreInitialViewportScroll();
     themeControls.ensureControls();
-    decorateImages();
+    refreshEditorDecorations();
   } catch (error) {
     const message = error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown initialization error.';
     postMessage({
@@ -574,6 +616,7 @@ window.addEventListener('scroll', () => {
 window.addEventListener('beforeunload', () => {
   persistState();
   drawioOverlay.destroy();
+  tableWidthManager?.destroy();
 }, { once: true });
 
 function handleMessage(message: ExtensionToWebviewMessage): void {
@@ -589,7 +632,7 @@ function handleMessage(message: ExtensionToWebviewMessage): void {
         setEditorMarkdown(message.payload.markdown);
       }
       queueMicrotask(() => {
-        decorateImages();
+        refreshEditorDecorations();
       });
       return;
     case 'themeChanged':

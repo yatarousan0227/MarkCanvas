@@ -253,6 +253,49 @@ body[data-preview-theme='light'] .milkdown .ProseMirror blockquote p {
   color: inherit;
 }
 
+.milkdown .ProseMirror .milkdown-table-block.markcanvas-table-width-enabled {
+  position: relative;
+}
+
+.milkdown .ProseMirror .milkdown-table-block table.children {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.markcanvas-table-width-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.markcanvas-table-width-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  transform: translateX(-50%);
+  cursor: col-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.markcanvas-table-width-handle::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 4px;
+  width: 2px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.markcanvas-table-width-handle:hover::after,
+.markcanvas-table-width-handle:active::after {
+  background: var(--rm-primary);
+}
+
 .markcanvas-drawio-overlay-layer {
   position: fixed;
   inset: 0;

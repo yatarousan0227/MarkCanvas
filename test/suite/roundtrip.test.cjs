@@ -4,11 +4,13 @@ const path = require('node:path');
 const { JSDOM } = require('jsdom');
 const { unified } = require('unified');
 const remarkParse = require('remark-parse').default;
+const esbuild = require('esbuild');
 
 let milkdownCore;
 let commonmarkPreset;
 let gfmPreset;
 let milkdownUtils;
+let tableWidths;
 const fallbackEventTarget = new EventTarget();
 
 const DOM_GLOBAL_KEYS = [
@@ -464,14 +466,135 @@ async function roundTripMarkCanvasMarkdown(markdown) {
   }
 }
 
+async function importTypeScriptModule(filePath) {
+  const source = fs.readFileSync(filePath, 'utf8');
+  const transformed = await esbuild.transform(source, {
+    loader: 'ts',
+    format: 'esm',
+    target: 'node20',
+  });
+  const encoded = Buffer.from(transformed.code).toString('base64');
+  return import(`data:text/javascript;base64,${encoded}`);
+}
+
 suite('MarkCanvas markdown round-trip', () => {
   suiteSetup(async () => {
-    [milkdownCore, commonmarkPreset, gfmPreset, milkdownUtils] = await Promise.all([
+    [milkdownCore, commonmarkPreset, gfmPreset, milkdownUtils, tableWidths] = await Promise.all([
       import('@milkdown/kit/core'),
       import('@milkdown/kit/preset/commonmark'),
       import('@milkdown/kit/preset/gfm'),
       import('@milkdown/utils'),
+      importTypeScriptModule(path.join(__dirname, '..', '..', 'src', 'webview', 'table-widths.ts')),
     ]);
+  });
+
+  test('extracts table width units and alignment from delimiter rows', () => {
+    const ranges = tableWidths.extractTableWidthRanges([
+      '|  name | value |',
+      '| :---: | ----- |',
+      '| alpha | 1     |',
+      '|  beta | 2     |',
+      '',
+    ].join('\n'));
+
+    assert.equal(ranges.length, 1);
+    assert.deepEqual(ranges[0].spec.columnUnits, [3, 5]);
+    assert.deepEqual(ranges[0].spec.aligns, ['center', null]);
+  });
+
+  test('applies table width state by rewriting only the delimiter row', () => {
+    const markdown = [
+      '| name  | value |',
+      '| ----- | ----- |',
+      '| alpha | 1     |',
+      '| beta  | 2     |',
+      '',
+    ].join('\n');
+    const state = tableWidths.createTableWidthState(markdown);
+    tableWidths.setTableWidthSpec(state, 0, [9, 3]);
+
+    const result = tableWidths.applyTableWidthState(markdown, state);
+
+    assert.equal(result, [
+      '| name  | value |',
+      '| --------- | --- |',
+      '| alpha | 1     |',
+      '| beta  | 2     |',
+      '',
+    ].join('\n'));
+  });
+
+  test('ignores table-like delimiter rows inside fenced code blocks', () => {
+    const markdown = [
+      '```md',
+      '| name | value |',
+      '| ---- | ----- |',
+      '| code | 1     |',
+      '```',
+      '',
+      '| name | value |',
+      '| ---- | ----- |',
+      '| doc  | 2     |',
+      '',
+    ].join('\n');
+
+    const ranges = tableWidths.extractTableWidthRanges(markdown);
+
+    assert.equal(ranges.length, 1);
+    assert.equal(ranges[0].delimiterLine, 7);
+  });
+
+  test('preserves current table alignment while applying stored widths', () => {
+    const markdown = [
+      '| name | value | count |',
+      '| ---- | -----: | :---: |',
+      '| a    | 1      | 2     |',
+      '',
+    ].join('\n');
+    const state = tableWidths.createTableWidthState(markdown);
+    tableWidths.setTableWidthSpec(state, 0, [3, 8, 5]);
+
+    const result = tableWidths.applyTableWidthState(markdown, state);
+
+    assert.equal(result.split('\n')[1], '| --- | --------: | :-----: |');
+  });
+
+  test('normalizes table width specs when columns are added', () => {
+    const markdown = [
+      '| name | value | extra |',
+      '| ---- | ----- | ----- |',
+      '| a    | 1     | x     |',
+      '',
+    ].join('\n');
+    const state = {
+      specs: [{ columnUnits: [8, 4], aligns: [null, null] }],
+      dirtyTableIndexes: new Set([0]),
+    };
+
+    const result = tableWidths.applyTableWidthState(markdown, state);
+
+    assert.equal(result.split('\n')[1], '| -------- | ---- | ------ |');
+  });
+
+  test('updates table width specs for explicit column insertion and deletion', () => {
+    const state = {
+      specs: [{ columnUnits: [8, 4, 10], aligns: [null, 'right', 'center'] }],
+      dirtyTableIndexes: new Set(),
+    };
+
+    tableWidths.insertTableWidthColumn(state, 0, 1, 3);
+    assert.deepEqual(state.specs[0].columnUnits, [8, 6, 4, 10]);
+    assert.deepEqual(state.specs[0].aligns, [null, null, 'right', 'center']);
+
+    tableWidths.deleteTableWidthColumn(state, 0, 2, 4);
+    assert.deepEqual(state.specs[0].columnUnits, [8, 6, 10]);
+    assert.deepEqual(state.specs[0].aligns, [null, null, 'center']);
+  });
+
+  test('converts pixel widths to bounded ratio markdown width units', () => {
+    assert.deepEqual(tableWidths.normalizeColumnUnitsFromWidths([100, 100]), [3, 3]);
+    assert.deepEqual(tableWidths.normalizeColumnUnitsFromWidths([50, 100]), [3, 6]);
+    assert.deepEqual(tableWidths.normalizeColumnUnitsFromWidths([36, 144, 288]), [3, 11, 22]);
   });
 
   test('preserves canonical commonmark and gfm markdown', async () => {
