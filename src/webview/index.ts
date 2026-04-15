@@ -509,7 +509,9 @@ function handleMessage(message: ExtensionToWebviewMessage): void {
       return;
     case 'replaceDocument':
       applyPayload(message.payload);
-      setEditorMarkdown(message.payload.markdown);
+      if (message.origin !== 'self') {
+        setEditorMarkdown(message.payload.markdown);
+      }
       queueMicrotask(() => {
         decorateImages();
       });

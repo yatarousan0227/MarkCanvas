@@ -44,7 +44,10 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
       disposed: false,
     };
 
-    const sendDocument = async (type: 'initDocument' | 'replaceDocument') => {
+    const sendDocument = async (
+      type: 'initDocument' | 'replaceDocument',
+      origin: 'self' | 'external' = 'external',
+    ) => {
       if (state.disposed) {
         return;
       }
@@ -52,7 +55,7 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
       if (state.disposed) {
         return;
       }
-      this.postMessage(state, { type, payload });
+      this.postMessage(state, { type, payload, origin });
     };
 
     const documentSubscription = vscode.workspace.onDidChangeTextDocument(async (event) => {
@@ -62,9 +65,11 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
 
       if (state.applyingVersion === event.document.version) {
         state.applyingVersion = null;
+        await sendDocument('replaceDocument', 'self');
+        return;
       }
 
-      await sendDocument('replaceDocument');
+      await sendDocument('replaceDocument', 'external');
     });
 
     const themeSubscription = vscode.window.onDidChangeActiveColorTheme(() => {

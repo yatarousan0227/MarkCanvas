@@ -17,6 +17,7 @@ export type ExtensionToWebviewMessage =
   | {
       type: 'initDocument' | 'replaceDocument';
       payload: DocumentPayload;
+      origin?: 'self' | 'external';
     }
   | {
       type: 'themeChanged';
