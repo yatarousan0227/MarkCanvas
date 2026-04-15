@@ -37,6 +37,8 @@ export function createMermaidPreviewManager(options: MermaidPreviewManagerOption
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'loose',
+      // Use plain SVG text labels because foreignObject-based labels can disappear inside VS Code webviews.
+      htmlLabels: false,
       theme: getEffectivePreviewTheme(themeState) === 'light' ? 'default' : 'dark',
     });
   }
@@ -100,4 +102,3 @@ export function createMermaidPreviewManager(options: MermaidPreviewManagerOption
     syncTheme,
   };
 }
-

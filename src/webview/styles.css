@@ -232,7 +232,6 @@ button {
   min-height: 96px;
 }
 
-.preview .labelBox,
 .preview .nodeLabel,
 .preview .edgeLabel,
 .preview .cluster-label,
