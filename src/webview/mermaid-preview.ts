@@ -19,6 +19,61 @@ function escapeHtml(value: string): string {
     .replaceAll('>', '&gt;');
 }
 
+function getThemeColor(name: string, fallback: string): string {
+  const value = window.getComputedStyle(document.body).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+function getMermaidThemeVariables() {
+  const background = getThemeColor('--rm-bg', '#ffffff');
+  const text = getThemeColor('--rm-fg', '#1f2328');
+  const heading = getThemeColor('--rm-heading', text);
+  const primary = getThemeColor('--rm-primary', '#0969da');
+  const surface = getThemeColor('--rm-widget-bg', background);
+  const surfaceLow = getThemeColor('--rm-surface-low', surface);
+  const border = getThemeColor('--rm-widget-border', primary);
+  const codeBackground = getThemeColor('--rm-code-bg', surfaceLow);
+  const quoteBackground = getThemeColor('--rm-quote-bg', surfaceLow);
+  const error = getThemeColor('--rm-error', '#d1242f');
+  const fontFamily = getThemeColor('--rm-font-ui', 'Arial, sans-serif');
+
+  return {
+    background,
+    mainBkg: surface,
+    primaryColor: surface,
+    primaryTextColor: text,
+    primaryBorderColor: border,
+    secondaryColor: surfaceLow,
+    secondaryTextColor: text,
+    secondaryBorderColor: border,
+    tertiaryColor: quoteBackground,
+    tertiaryTextColor: text,
+    tertiaryBorderColor: border,
+    lineColor: primary,
+    textColor: text,
+    titleColor: heading,
+    edgeLabelBackground: background,
+    clusterBkg: codeBackground,
+    clusterBorder: border,
+    noteBkg: quoteBackground,
+    noteTextColor: text,
+    noteBorderColor: border,
+    actorBkg: surface,
+    actorTextColor: text,
+    actorBorder: border,
+    signalColor: text,
+    signalTextColor: text,
+    labelBoxBkgColor: surface,
+    labelTextColor: text,
+    loopTextColor: text,
+    activationBkgColor: surfaceLow,
+    activationBorderColor: border,
+    errorBkgColor: quoteBackground,
+    errorTextColor: error,
+    fontFamily,
+  };
+}
+
 export function createMermaidPreviewManager(options: MermaidPreviewManagerOptions) {
   let previewCounter = 0;
   const previewSources = new WeakMap<MermaidPreviewApply, string>();
@@ -41,7 +96,9 @@ export function createMermaidPreviewManager(options: MermaidPreviewManagerOption
       htmlLabels: false,
       // Keep Mermaid parse errors inside our inline banner instead of leaving a global error SVG in the document.
       suppressErrorRendering: true,
-      theme: getEffectivePreviewTheme(themeState) === 'light' ? 'default' : 'dark',
+      theme: 'base',
+      darkMode: getEffectivePreviewTheme(themeState) === 'dark',
+      themeVariables: getMermaidThemeVariables(),
     });
   }
 
