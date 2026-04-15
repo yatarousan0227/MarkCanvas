@@ -37,20 +37,6 @@ body[data-preview-theme='system'] {
   --rm-surface-low: var(--vscode-editorWidget-background, var(--vscode-input-background, var(--vscode-sideBar-background, var(--vscode-editor-background, #f6f8fa))));
   --rm-muted: var(--vscode-descriptionForeground, color-mix(in srgb, var(--rm-fg) 68%, var(--rm-bg)));
   --rm-outline: var(--vscode-contrastBorder, var(--vscode-editorWidget-border, var(--vscode-widget-border, var(--vscode-dropdown-border, var(--vscode-panel-border, rgb(128 128 128 / 0.36))))));
-  --rm-widget-bg: var(--vscode-editorWidget-background, var(--vscode-quickInput-background, var(--vscode-dropdown-background, var(--rm-surface-low))));
-  --rm-widget-fg: var(--vscode-editorWidget-foreground, var(--vscode-quickInput-foreground, var(--vscode-dropdown-foreground, var(--rm-fg))));
-  --rm-widget-border: var(--vscode-editorWidget-border, var(--vscode-dropdown-border, var(--rm-outline)));
-  --rm-menu-bg: var(--vscode-menu-background, var(--vscode-quickInput-background, var(--rm-widget-bg)));
-  --rm-menu-fg: var(--vscode-menu-foreground, var(--vscode-quickInput-foreground, var(--rm-widget-fg)));
-  --rm-menu-selected-bg: var(--vscode-menu-selectionBackground, var(--vscode-quickInputList-focusBackground, var(--vscode-list-focusBackground, var(--rm-hover))));
-  --rm-menu-selected-fg: var(--vscode-menu-selectionForeground, var(--vscode-list-focusForeground, var(--rm-menu-fg)));
-  --rm-menu-border: var(--vscode-menu-border, var(--rm-widget-border));
-  --rm-input-bg: var(--vscode-input-background, var(--vscode-dropdown-background, var(--rm-surface-low)));
-  --rm-input-fg: var(--vscode-input-foreground, var(--vscode-dropdown-foreground, var(--rm-fg)));
-  --rm-input-border: var(--vscode-input-border, var(--vscode-dropdown-border, var(--rm-outline)));
-  --rm-input-placeholder: var(--vscode-input-placeholderForeground, var(--rm-muted));
-  --rm-icon-fg: var(--vscode-icon-foreground, var(--rm-muted));
-  --rm-shadow: var(--vscode-widget-shadow, rgb(0 0 0 / 0.28));
   --rm-primary: var(--vscode-textLink-foreground, var(--vscode-focusBorder, #0969da));
   --rm-secondary-bg: var(--vscode-button-secondaryBackground, var(--vscode-dropdown-background, var(--vscode-input-background, var(--rm-surface-low))));
   --rm-secondary-fg: var(--vscode-button-secondaryForeground, var(--vscode-dropdown-foreground, var(--vscode-input-foreground, var(--rm-fg))));
@@ -70,18 +56,6 @@ body[data-preview-theme='system'] {
   --rm-error: var(--vscode-errorForeground, #d1242f);
 }
 
-body[data-preview-theme='system'][data-theme='hc'] {
-  --rm-muted: var(--vscode-editor-foreground, var(--rm-fg));
-  --rm-outline: var(--vscode-contrastBorder, var(--vscode-focusBorder, var(--rm-primary)));
-  --rm-widget-border: var(--vscode-contrastBorder, var(--vscode-focusBorder, var(--rm-outline)));
-  --rm-menu-border: var(--vscode-contrastBorder, var(--vscode-focusBorder, var(--rm-outline)));
-  --rm-input-border: var(--vscode-contrastBorder, var(--vscode-focusBorder, var(--rm-outline)));
-  --rm-icon-fg: var(--vscode-icon-foreground, var(--vscode-editor-foreground, var(--rm-fg)));
-  --rm-code-border: var(--vscode-contrastBorder, var(--vscode-focusBorder, var(--rm-outline)));
-  --rm-quote-border: var(--vscode-contrastBorder, var(--vscode-focusBorder, var(--rm-primary)));
-  --rm-table-border: var(--vscode-contrastBorder, var(--vscode-focusBorder, var(--rm-outline)));
-}
-
 body[data-preview-theme='light'] {
   --rm-bg: #f7f7f9;
   --rm-fg: #20242b;
@@ -90,20 +64,6 @@ body[data-preview-theme='light'] {
   --rm-surface-low: #eef1f5;
   --rm-muted: #5f6b7a;
   --rm-outline: #c9d1db;
-  --rm-widget-bg: #ffffff;
-  --rm-widget-fg: #20242b;
-  --rm-widget-border: #c9d1db;
-  --rm-menu-bg: #ffffff;
-  --rm-menu-fg: #20242b;
-  --rm-menu-selected-bg: #e7f0ff;
-  --rm-menu-selected-fg: #0f3f97;
-  --rm-menu-border: #d6dde8;
-  --rm-input-bg: #ffffff;
-  --rm-input-fg: #20242b;
-  --rm-input-border: #c9d1db;
-  --rm-input-placeholder: #6f7b8a;
-  --rm-icon-fg: #66758a;
-  --rm-shadow: rgb(15 23 42 / 0.16);
   --rm-primary: #0b57d0;
   --rm-secondary-bg: #edf2ff;
   --rm-secondary-fg: #183153;
@@ -131,20 +91,6 @@ body[data-preview-theme='dark'] {
   --rm-surface-low: #2c3139;
   --rm-muted: #aeb8c5;
   --rm-outline: #454b57;
-  --rm-widget-bg: #252a33;
-  --rm-widget-fg: #eef2f7;
-  --rm-widget-border: #454b57;
-  --rm-menu-bg: #252a33;
-  --rm-menu-fg: #eef2f7;
-  --rm-menu-selected-bg: #334259;
-  --rm-menu-selected-fg: #ffffff;
-  --rm-menu-border: #4a5362;
-  --rm-input-bg: #171b22;
-  --rm-input-fg: #eef2f7;
-  --rm-input-border: #454b57;
-  --rm-input-placeholder: #9ca8b8;
-  --rm-icon-fg: #b8c2d0;
-  --rm-shadow: rgb(0 0 0 / 0.38);
   --rm-primary: #8ab4ff;
   --rm-secondary-bg: #2a3240;
   --rm-secondary-fg: #eef2f7;
@@ -179,9 +125,9 @@ body {
 .milkdown {
   --crepe-color-background: var(--rm-bg);
   --crepe-color-on-background: var(--rm-fg);
-  --crepe-color-surface: var(--rm-widget-bg);
-  --crepe-color-surface-low: var(--rm-input-bg);
-  --crepe-color-on-surface: var(--rm-widget-fg);
+  --crepe-color-surface: var(--rm-surface);
+  --crepe-color-surface-low: var(--rm-surface-low);
+  --crepe-color-on-surface: var(--rm-fg);
   --crepe-color-on-surface-variant: var(--rm-muted);
   --crepe-color-outline: var(--rm-outline);
   --crepe-color-primary: var(--rm-primary);
@@ -197,8 +143,6 @@ body {
   --crepe-font-title: var(--rm-font-ui);
   --crepe-font-default: var(--rm-font-ui);
   --crepe-font-code: var(--rm-font-code);
-  --crepe-shadow-1: 0 8px 24px var(--rm-shadow);
-  --crepe-shadow-2: 0 12px 32px var(--rm-shadow);
 }
 
 .milkdown-editor {
@@ -276,148 +220,6 @@ body {
   background: var(--rm-table-header-bg);
 }
 
-.milkdown .milkdown-toolbar,
-.milkdown .milkdown-link-preview > .link-preview,
-.milkdown .milkdown-link-edit > .link-edit,
-.milkdown .milkdown-latex-inline-edit,
-.milkdown .milkdown-table-block .cell-handle .button-group,
-.milkdown .milkdown-table-block .line-handle .add-button {
-  color: var(--rm-widget-fg);
-  background: var(--rm-widget-bg);
-  border: 1px solid var(--rm-widget-border);
-}
-
-.milkdown .milkdown-slash-menu,
-.milkdown .milkdown-code-block .list-wrapper {
-  color: var(--rm-menu-fg);
-  background: var(--rm-menu-bg);
-  border: 1px solid var(--rm-menu-border);
-}
-
-.milkdown .milkdown-toolbar .divider,
-.milkdown .milkdown-slash-menu .menu-groups .menu-group + .menu-group::before {
-  background: var(--rm-menu-border);
-}
-
-.milkdown .milkdown-slash-menu .tab-group {
-  border-bottom-color: var(--rm-menu-border);
-}
-
-.milkdown .milkdown-toolbar .toolbar-item:hover,
-.milkdown .milkdown-link-preview > .link-preview > .link-icon:hover,
-.milkdown .milkdown-link-preview > .link-preview > .button:hover,
-.milkdown .milkdown-link-edit > .link-edit > .button:hover,
-.milkdown .milkdown-slash-menu .tab-group ul li:hover,
-.milkdown .milkdown-slash-menu .menu-groups .menu-group li.hover,
-.milkdown .milkdown-code-block .language-list-item:hover,
-.milkdown .milkdown-code-block .language-list-item:focus-visible,
-.milkdown .milkdown-code-block .search-box .clear-icon:hover,
-.milkdown .milkdown-table-block .cell-handle .button-group button:hover,
-.milkdown .milkdown-table-block .line-handle .add-button:hover,
-.milkdown .milkdown-latex-inline-edit .container button:hover {
-  color: var(--rm-menu-selected-fg);
-  background: var(--rm-menu-selected-bg);
-}
-
-.milkdown .milkdown-toolbar .toolbar-item:active,
-.milkdown .milkdown-slash-menu .tab-group ul li.selected,
-.milkdown .milkdown-slash-menu .menu-groups .menu-group li.active,
-.milkdown .milkdown-table-block .cell-handle .button-group button:active {
-  color: var(--rm-menu-selected-fg);
-  background: var(--rm-selected);
-}
-
-.milkdown .milkdown-toolbar svg,
-.milkdown .milkdown-block-handle svg,
-.milkdown .milkdown-link-preview svg,
-.milkdown .milkdown-link-edit svg,
-.milkdown .milkdown-slash-menu svg,
-.milkdown .milkdown-table-block svg,
-.milkdown .milkdown-code-block svg,
-.milkdown .milkdown-image-block svg {
-  color: var(--rm-icon-fg);
-  fill: var(--rm-icon-fg);
-}
-
-.milkdown .milkdown-toolbar .toolbar-item.active svg,
-.milkdown .milkdown-code-block .search-box .clear-icon svg {
-  color: var(--rm-primary);
-  fill: var(--rm-primary);
-}
-
-.milkdown .milkdown-link-preview > .link-preview > .link-display,
-.milkdown .milkdown-link-edit > .link-edit > .input-area,
-.milkdown .milkdown-code-block .search-box .search-input,
-.milkdown .milkdown-code-block .search-box input,
-.milkdown .milkdown-image-block input,
-.milkdown .milkdown-image-block > .caption-input {
-  color: var(--rm-input-fg);
-  caret-color: var(--rm-input-fg);
-}
-
-.milkdown .milkdown-code-block,
-.milkdown .milkdown-code-block .cm-editor,
-.milkdown .milkdown-code-block .cm-gutters {
-  color: var(--rm-code-fg);
-  background: var(--rm-code-bg);
-}
-
-.milkdown .milkdown-code-block {
-  border: 1px solid var(--rm-code-border);
-  border-radius: 6px;
-}
-
-.milkdown .milkdown-code-block .cm-content,
-.milkdown .milkdown-code-block .cm-line {
-  color: var(--rm-code-fg);
-}
-
-.milkdown .milkdown-code-block .cm-cursor {
-  border-left-color: var(--rm-code-fg);
-}
-
-.milkdown .milkdown-code-block .cm-panel,
-.milkdown .milkdown-code-block .tools .language-button,
-.milkdown .milkdown-code-block .tools .tools-button-group button,
-.milkdown .milkdown-code-block .search-box {
-  color: var(--rm-widget-fg);
-  background: var(--rm-widget-bg);
-  border-color: var(--rm-widget-border);
-}
-
-.milkdown .milkdown-code-block .cm-panel input,
-.milkdown .milkdown-code-block .search-box input {
-  color: var(--rm-input-fg);
-  background: var(--rm-input-bg);
-}
-
-.milkdown .milkdown-code-block .search-box {
-  outline-color: var(--rm-focus);
-}
-
-.milkdown .milkdown-code-block .search-box:has(input:focus) {
-  outline-color: var(--rm-focus);
-}
-
-.milkdown .milkdown-image-block .image-edit {
-  color: var(--rm-widget-fg);
-  background: var(--rm-widget-bg);
-  border: 1px solid var(--rm-widget-border);
-  border-radius: 6px;
-}
-
-.milkdown .milkdown-image-block .image-edit .link-importer .placeholder,
-.milkdown .crepe-placeholder::before {
-  color: var(--rm-input-placeholder);
-}
-
-.milkdown .milkdown-image-block .image-wrapper .operation > .operation-item,
-.markcanvas-drawio-overlay-button {
-  color: var(--rm-primary-fg);
-  background: var(--rm-primary-bg);
-  border: 1px solid color-mix(in srgb, var(--rm-primary-bg) 72%, var(--rm-outline));
-}
-
 .milkdown .milkdown-top-bar {
   justify-content: space-between;
   gap: 8px;
@@ -459,21 +261,15 @@ button:focus-visible {
 }
 
 .milkdown .milkdown-top-bar .top-bar-heading-dropdown {
-  background: var(--rm-menu-bg);
-  border-color: var(--rm-menu-border);
-  color: var(--rm-menu-fg);
+  background: var(--rm-surface-low);
+  border-color: var(--rm-outline);
+  color: var(--rm-fg);
 }
 
 .milkdown .milkdown-top-bar .top-bar-heading-button,
 .milkdown .milkdown-top-bar .top-bar-heading-option,
 .milkdown .milkdown-top-bar .top-bar-item {
-  color: var(--rm-widget-fg);
-}
-
-.milkdown .milkdown-top-bar .top-bar-heading-option:hover,
-.milkdown .milkdown-top-bar .top-bar-item:hover {
-  color: var(--rm-menu-selected-fg);
-  background: var(--rm-menu-selected-bg);
+  color: var(--rm-fg);
 }
 
 .milkdown .milkdown-top-bar .preview-theme-selector .top-bar-heading-label {
@@ -506,10 +302,9 @@ button:focus-visible {
 .milkdown .ProseMirror .markcanvas-html-preview {
   display: inline-block;
   max-width: 100%;
-  border: 1px solid var(--rm-widget-border);
+  border: 1px solid color-mix(in srgb, var(--rm-outline) 72%, transparent);
   border-radius: 10px;
-  background: var(--rm-widget-bg);
-  color: var(--rm-widget-fg);
+  background: color-mix(in srgb, var(--rm-surface) 92%, transparent);
   padding: 10px 12px;
   vertical-align: top;
   overflow-x: auto;
@@ -547,13 +342,8 @@ button:focus-visible {
 
 .milkdown .ProseMirror .markcanvas-html-preview th,
 .milkdown .ProseMirror .markcanvas-html-preview td {
-  border: 1px solid var(--rm-table-border);
+  border: 1px solid var(--rm-outline);
   padding: 6px 10px;
-}
-
-.milkdown .ProseMirror .markcanvas-html-preview th {
-  background: var(--rm-table-header-bg);
-  color: var(--rm-heading);
 }
 
 .mermaid-preview.is-loading {
@@ -566,6 +356,19 @@ button:focus-visible {
 .preview text {
   color: var(--rm-fg);
   fill: var(--rm-fg);
+}
+
+body[data-preview-theme='light'] .milkdown .ProseMirror blockquote {
+  color: var(--rm-muted);
+  background: transparent;
+}
+
+body[data-preview-theme='light'] .milkdown .ProseMirror blockquote::before {
+  background: color-mix(in srgb, var(--rm-primary) 20%, var(--rm-outline));
+}
+
+body[data-preview-theme='light'] .milkdown .ProseMirror blockquote p {
+  color: inherit;
 }
 
 .milkdown .ProseMirror .milkdown-table-block.markcanvas-table-width-enabled {
@@ -623,7 +426,7 @@ button:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--rm-primary-bg) 72%, var(--rm-outline));
+  border: 0;
   padding: 4px;
   border-radius: 999px;
   cursor: pointer;

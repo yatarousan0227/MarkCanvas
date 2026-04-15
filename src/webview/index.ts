@@ -36,7 +36,6 @@ declare global {
         viewportScrollY?: number;
       } | undefined;
       setState(state: {
-        previewTheme?: PreviewTheme;
         viewportScrollX?: number;
         viewportScrollY?: number;
       }): void;
@@ -148,7 +147,6 @@ const markdownEditor = createMarkdownEditorBridge({
 
 function persistState(): void {
   vscode.setState({
-    previewTheme,
     viewportScrollX: window.scrollX,
     viewportScrollY: window.scrollY,
   });
@@ -290,6 +288,10 @@ function setPreviewTheme(nextTheme: PreviewTheme): void {
   persistState();
   refreshPreviewTheme();
   mermaidPreview.rerender();
+  postMessage({
+    type: 'setPreviewTheme',
+    previewTheme: nextTheme,
+  });
 }
 
 async function createEditor(initial: DocumentPayload): Promise<void> {
@@ -418,6 +420,15 @@ function handleMessage(message: ExtensionToWebviewMessage): void {
       if (previewTheme === 'system') {
         mermaidPreview.rerender();
       }
+      return;
+    case 'previewThemeChanged':
+      if (previewTheme === message.previewTheme) {
+        return;
+      }
+
+      previewTheme = message.previewTheme;
+      refreshPreviewTheme();
+      mermaidPreview.rerender();
       return;
     case 'openResourceResult':
       if (!message.ok && message.error) {

@@ -26,6 +26,10 @@ export type ExtensionToWebviewMessage =
       themeKind: 'light' | 'dark' | 'hc';
     }
   | {
+      type: 'previewThemeChanged';
+      previewTheme: 'system' | 'light' | 'dark';
+    }
+  | {
       type: 'openResourceResult';
       ok: boolean;
       target: string | null;
@@ -44,6 +48,10 @@ export type WebviewToExtensionMessage =
       type: 'applyMarkdown';
       markdown: string;
       version: number;
+    }
+  | {
+      type: 'setPreviewTheme';
+      previewTheme: 'system' | 'light' | 'dark';
     }
   | {
       type: 'openDrawioFile';

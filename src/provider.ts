@@ -11,6 +11,7 @@ import type {
 } from './types';
 
 const DOCUMENT_SYNC_DEBOUNCE_MS = 120;
+type PreviewTheme = 'system' | 'light' | 'dark';
 
 export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   public static readonly viewType = 'renderedMarkdown.editor';
@@ -61,6 +62,16 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
         themeKind: this.getThemeKind(vscode.window.activeColorTheme),
       });
     });
+    const previewThemeSubscription = vscode.workspace.onDidChangeConfiguration((event) => {
+      if (!event.affectsConfiguration('markcanvas.previewTheme', document.uri)) {
+        return;
+      }
+
+      this.postMessage(state, {
+        type: 'previewThemeChanged',
+        previewTheme: this.getConfiguredPreviewTheme(document.uri),
+      });
+    });
 
     panel.onDidDispose(() => {
       state.disposed = true;
@@ -71,12 +82,16 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
       this.drawioPreviewManager.dispose(state);
       documentSubscription.dispose();
       themeSubscription.dispose();
+      previewThemeSubscription.dispose();
     });
 
     panel.webview.onDidReceiveMessage(async (message: WebviewToExtensionMessage) => {
       switch (message.type) {
         case 'applyMarkdown':
           await this.applyMarkdown(state, message.markdown, message.version);
+          return;
+        case 'setPreviewTheme':
+          await this.setConfiguredPreviewTheme(document.uri, message.previewTheme);
           return;
         case 'openDrawioFile':
           await this.openResource(state, message.target);
@@ -94,6 +109,10 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
     this.postMessage(state, {
       type: 'themeChanged',
       themeKind: this.getThemeKind(vscode.window.activeColorTheme),
+    });
+    this.postMessage(state, {
+      type: 'previewThemeChanged',
+      previewTheme: this.getConfiguredPreviewTheme(document.uri),
     });
   }
 
@@ -240,5 +259,26 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
       default:
         return 'dark';
     }
+  }
+
+  private getConfiguredPreviewTheme(resource: vscode.Uri): PreviewTheme {
+    const value = vscode.workspace
+      .getConfiguration('markcanvas', resource)
+      .get<string>('previewTheme');
+    return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
+  }
+
+  private async setConfiguredPreviewTheme(resource: vscode.Uri, previewTheme: PreviewTheme): Promise<void> {
+    const configuration = vscode.workspace.getConfiguration('markcanvas', resource);
+    const inspected = configuration.inspect<PreviewTheme>('previewTheme');
+    let target = vscode.ConfigurationTarget.Global;
+
+    if (inspected?.workspaceFolderValue !== undefined) {
+      target = vscode.ConfigurationTarget.WorkspaceFolder;
+    } else if (inspected?.workspaceValue !== undefined) {
+      target = vscode.ConfigurationTarget.Workspace;
+    }
+
+    await configuration.update('previewTheme', previewTheme, target);
   }
 }

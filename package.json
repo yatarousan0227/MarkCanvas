@@ -2,7 +2,7 @@
   "name": "markcanvas",
   "displayName": "MarkCanvas",
   "description": "Rendered Markdown editor with Mermaid and Draw.io support",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "publisher": "ShinyaIwasaki",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -39,6 +39,27 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "MarkCanvas",
+      "properties": {
+        "markcanvas.previewTheme": {
+          "type": "string",
+          "default": "system",
+          "scope": "window",
+          "enum": [
+            "system",
+            "light",
+            "dark"
+          ],
+          "enumDescriptions": [
+            "Follow the active VS Code theme.",
+            "Always use the light preview theme.",
+            "Always use the dark preview theme."
+          ],
+          "markdownDescription": "Controls the preview theme used by MarkCanvas."
+        }
+      }
+    },
     "customEditors": [
       {
         "viewType": "renderedMarkdown.editor",
