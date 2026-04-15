@@ -28,17 +28,28 @@ declare global {
   interface Window {
     acquireVsCodeApi(): {
       postMessage(message: WebviewToExtensionMessage): void;
-      getState(): { payload?: DocumentPayload; previewTheme?: PreviewTheme } | undefined;
-      setState(state: { payload?: DocumentPayload; previewTheme?: PreviewTheme }): void;
+      getState(): {
+        payload?: DocumentPayload;
+        previewTheme?: PreviewTheme;
+        viewportScrollX?: number;
+        viewportScrollY?: number;
+      } | undefined;
+      setState(state: {
+        payload?: DocumentPayload;
+        previewTheme?: PreviewTheme;
+        viewportScrollX?: number;
+        viewportScrollY?: number;
+      }): void;
     };
   }
 }
 
 const vscode = window.acquireVsCodeApi();
+const initialState = vscode.getState();
 
-let payload = vscode.getState()?.payload;
+let payload = initialState?.payload;
 let currentVersion = payload?.version ?? 0;
-let previewTheme: PreviewTheme = vscode.getState()?.previewTheme ?? 'system';
+let previewTheme: PreviewTheme = initialState?.previewTheme ?? 'system';
 let hostThemeKind: HostThemeKind = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 
 let suppressUpdates = false;
@@ -48,6 +59,14 @@ let editorInstance: Editor | null = null;
 let crepe: Crepe | null = null;
 let baselineMarkdownSnapshot: MarkdownSnapshot | null = null;
 let pendingUserEditIntent = false;
+let pendingInitialViewportScroll = initialState
+  && Number.isFinite(initialState.viewportScrollX)
+  && Number.isFinite(initialState.viewportScrollY)
+  ? {
+      x: initialState.viewportScrollX ?? 0,
+      y: initialState.viewportScrollY ?? 0,
+    }
+  : null;
 
 const resourceCache = new Map<string, ResourceDescriptor>();
 const resolvedResourceCache = new Map<string, ResourceDescriptor>();
@@ -101,7 +120,12 @@ const drawioOverlay = createDrawioOverlayManager({
 });
 
 function persistState(): void {
-  vscode.setState({ payload, previewTheme });
+  vscode.setState({
+    payload,
+    previewTheme,
+    viewportScrollX: window.scrollX,
+    viewportScrollY: window.scrollY,
+  });
 }
 
 function getThemeState(): { hostThemeKind: HostThemeKind; previewTheme: PreviewTheme } {
@@ -374,6 +398,23 @@ function restoreViewportScroll(x: number, y: number): void {
   window.scrollTo(x, y);
 }
 
+function restoreInitialViewportScroll(): void {
+  if (!pendingInitialViewportScroll) {
+    return;
+  }
+
+  const { x, y } = pendingInitialViewportScroll;
+  pendingInitialViewportScroll = null;
+  restoreViewportScroll(x, y);
+  requestAnimationFrame(() => {
+    restoreViewportScroll(x, y);
+    requestAnimationFrame(() => {
+      restoreViewportScroll(x, y);
+      persistState();
+    });
+  });
+}
+
 function applyPayload(next: DocumentPayload): void {
   payload = next;
   currentVersion = next.version;
@@ -512,6 +553,7 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
 
     editorInstance = await crepe.create();
     installUserEditIntentTracking();
+    restoreInitialViewportScroll();
     themeControls.ensureControls();
     decorateImages();
   } catch (error) {
@@ -525,7 +567,12 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
   }
 }
 
+window.addEventListener('scroll', () => {
+  persistState();
+}, { passive: true });
+
 window.addEventListener('beforeunload', () => {
+  persistState();
   drawioOverlay.destroy();
 }, { once: true });
 
