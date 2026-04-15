@@ -6,6 +6,7 @@ import { languages as defaultCodeBlockLanguages } from '@codemirror/language-dat
 import type { Editor } from '@milkdown/kit/core';
 import { editorViewCtx, parserCtx, remarkStringifyOptionsCtx } from '@milkdown/kit/core';
 import { Slice } from '@milkdown/kit/prose/model';
+import { Selection, TextSelection } from '@milkdown/kit/prose/state';
 import { Crepe } from '@milkdown/crepe';
 import type {
   DocumentPayload,
@@ -315,6 +316,35 @@ function reconstructMarkdownForSave(markdown: string): string {
   }
 }
 
+function shouldSkipMarkdownReset(markdown: string, force: boolean): boolean {
+  if (!crepe) {
+    return true;
+  }
+
+  const currentMarkdown = crepe.getMarkdown();
+  if (currentMarkdown === markdown) {
+    return true;
+  }
+
+  if (force) {
+    return false;
+  }
+
+  try {
+    return reconstructMarkdownForSave(currentMarkdown) === markdown;
+  } catch {
+    return false;
+  }
+}
+
+function clampSelectionPosition(position: number, size: number): number {
+  return Math.max(0, Math.min(position, size));
+}
+
+function restoreViewportScroll(x: number, y: number): void {
+  window.scrollTo(x, y);
+}
+
 function applyPayload(next: DocumentPayload): void {
   payload = next;
   currentVersion = next.version;
@@ -354,12 +384,14 @@ function setPreviewTheme(nextTheme: PreviewTheme): void {
 }
 
 function setEditorMarkdown(markdown: string, force = false): void {
-  if (!editorInstance || !crepe || (!force && crepe.getMarkdown() === markdown)) {
+  if (!editorInstance || shouldSkipMarkdownReset(markdown, force)) {
     return;
   }
 
   suppressUpdates = true;
   clearUserEditIntent();
+  const previousScrollX = window.scrollX;
+  const previousScrollY = window.scrollY;
   try {
     editorInstance.action((ctx) => {
       const view = ctx.get(editorViewCtx);
@@ -370,11 +402,28 @@ function setEditorMarkdown(markdown: string, force = false): void {
       }
 
       const { state } = view;
-      view.dispatch(state.tr.replace(0, state.doc.content.size, new Slice(doc.content, 0, 0)));
+      let tr = state.tr.replace(0, state.doc.content.size, new Slice(doc.content, 0, 0));
+      const anchor = clampSelectionPosition(state.selection.anchor, tr.doc.content.size);
+      const head = clampSelectionPosition(state.selection.head, tr.doc.content.size);
+
+      try {
+        tr = state.selection instanceof TextSelection
+          ? tr.setSelection(TextSelection.between(tr.doc.resolve(anchor), tr.doc.resolve(head)))
+          : tr.setSelection(Selection.near(tr.doc.resolve(anchor)));
+      } catch {
+        tr = tr.setSelection(Selection.near(tr.doc.resolve(anchor)));
+      }
+
+      view.dispatch(tr);
     });
   } finally {
     suppressUpdates = false;
   }
+
+  restoreViewportScroll(previousScrollX, previousScrollY);
+  requestAnimationFrame(() => {
+    restoreViewportScroll(previousScrollX, previousScrollY);
+  });
 }
 
 async function createEditor(initial: DocumentPayload): Promise<void> {
