@@ -176,6 +176,26 @@ function installUserEditIntentTracking(): void {
     return;
   }
 
+  const markStructuredEditIntent = (eventTarget: EventTarget | null): void => {
+    if (!(eventTarget instanceof HTMLInputElement)) {
+      if (!(eventTarget instanceof Element)) {
+        return;
+      }
+
+      if (eventTarget.closest('.milkdown-list-item-block .label-wrapper')) {
+        markUserEditIntent();
+      }
+
+      return;
+    }
+
+    if (eventTarget.type !== 'checkbox') {
+      return;
+    }
+
+    markUserEditIntent();
+  };
+
   root.addEventListener('beforeinput', () => {
     markUserEditIntent();
   }, true);
@@ -187,6 +207,15 @@ function installUserEditIntentTracking(): void {
   }, true);
   root.addEventListener('drop', () => {
     markUserEditIntent();
+  }, true);
+  root.addEventListener('pointerdown', (event) => {
+    markStructuredEditIntent(event.target);
+  }, true);
+  root.addEventListener('click', (event) => {
+    markStructuredEditIntent(event.target);
+  }, true);
+  root.addEventListener('change', (event) => {
+    markStructuredEditIntent(event.target);
   }, true);
   root.addEventListener('keydown', (event) => {
     if (shouldTreatKeydownAsEditIntent(event)) {

@@ -37,6 +37,13 @@ serializer 周りの回帰だけを確認したい場合は `docs/serializer-reg
 
 あああ
 
+## Task List Sync
+
+下のチェックボックスを MarkCanvas 上でクリックして、チェック状態の変更が元の Markdown にも `- [x]` / `- [ ]` として反映されることを確認します。
+
+- [x] checked item
+- [ ] unchecked item
+
 ## Math
 
 Inline math: $E = mc^2$

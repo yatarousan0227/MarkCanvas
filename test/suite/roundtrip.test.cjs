@@ -583,6 +583,19 @@ suite('MarkCanvas markdown round-trip', () => {
     assert.equal(result, markdown);
   });
 
+  test('preserves task list checkbox states in MarkCanvas config', async function testTaskListRoundTrip() {
+    this.timeout(10000);
+
+    const markdown = [
+      '- [x] shipped',
+      '- [ ] pending',
+      '',
+    ].join('\n');
+
+    const result = await roundTripMarkCanvasMarkdown(markdown);
+    assert.equal(result, markdown);
+  });
+
   test('preserves dotted prose without escaping periods', async function testDottedProseRoundTrip() {
     this.timeout(10000);
 
