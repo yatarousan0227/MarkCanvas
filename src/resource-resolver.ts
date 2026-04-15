@@ -12,8 +12,8 @@ const COMMON_BINARY_IMAGE_EXTENSIONS = new Set(['.avif', '.bmp', '.gif', '.jpeg'
 export class ResourceResolver {
   constructor(private readonly drawioPreviewManager: DrawioPreviewManager) {}
 
-  public async collectResources(state: PanelState): Promise<ResourceDescriptor[]> {
-    const tree = unified().use(remarkParse).parse(state.document.getText());
+  public async collectResources(state: PanelState, markdown: string): Promise<ResourceDescriptor[]> {
+    const tree = unified().use(remarkParse).parse(markdown);
     const seen = new Set<string>();
     const resources: ResourceDescriptor[] = [];
 
@@ -89,7 +89,13 @@ export class ResourceResolver {
       const isDrawio = isDrawioImage || isDrawioXml;
 
       if (isDrawioXml && !isSvg) {
-        return this.drawioPreviewManager.resolvePreviewResource(state, original, suffix, targetUri);
+        return this.drawioPreviewManager.resolvePreviewResource(
+          state,
+          original,
+          suffix,
+          targetUri,
+          stat,
+        );
       }
 
       return {

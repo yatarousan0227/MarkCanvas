@@ -7,11 +7,10 @@ export type PanelState = {
   applyingVersion: number | null;
   disposed: boolean;
   drawioPreviewRoot: vscode.Uri;
-  drawioPreviewDirectory: vscode.Uri | null;
-  drawioPreviewGeneration: number;
   drawioPreviewOutputs: Map<string, vscode.Uri>;
-  obsoleteDrawioPreviewDirectories: vscode.Uri[];
-  drawioCleanupTimer: NodeJS.Timeout | null;
+  documentSyncTimer: NodeJS.Timeout | null;
+  pendingDocumentSyncOrigin: 'self' | 'external' | null;
+  documentSyncInFlight: boolean;
 };
 
 export function createPanelState(
@@ -29,10 +28,9 @@ export function createPanelState(
       'drawio-preview',
       randomUUID(),
     ),
-    drawioPreviewDirectory: null,
-    drawioPreviewGeneration: 0,
     drawioPreviewOutputs: new Map(),
-    obsoleteDrawioPreviewDirectories: [],
-    drawioCleanupTimer: null,
+    documentSyncTimer: null,
+    pendingDocumentSyncOrigin: null,
+    documentSyncInFlight: false,
   };
 }

@@ -10,7 +10,6 @@ const execFileAsync = promisify(execFile);
 const DRAWIO_PREVIEW_UNAVAILABLE_MESSAGE = 'Install draw.io Desktop to preview draw.io files in MarkCanvas.';
 const DRAWIO_PREVIEW_FAILED_MESSAGE = 'draw.io preview generation failed. Install draw.io Desktop and try again.';
 const DRAWIO_PAGE_INDEX = 0;
-const DRAWIO_OBSOLETE_PREVIEW_CLEANUP_DELAY_MS = 5000;
 
 export class DrawioPreviewManager {
   private readonly activeDrawioPreviewRoots = new Set<string>();
@@ -24,40 +23,8 @@ export class DrawioPreviewManager {
   }
 
   public dispose(state: PanelState): void {
-    if (state.drawioCleanupTimer) {
-      clearTimeout(state.drawioCleanupTimer);
-      state.drawioCleanupTimer = null;
-    }
-
     this.activeDrawioPreviewRoots.delete(state.drawioPreviewRoot.toString());
     void this.deletePreviewDirectory(state.drawioPreviewRoot);
-  }
-
-  public beginGeneration(state: PanelState): void {
-    if (state.drawioPreviewDirectory) {
-      state.obsoleteDrawioPreviewDirectories.push(state.drawioPreviewDirectory);
-    }
-
-    state.drawioPreviewGeneration += 1;
-    state.drawioPreviewDirectory = vscode.Uri.joinPath(
-      state.drawioPreviewRoot,
-      String(state.drawioPreviewGeneration),
-    );
-    state.drawioPreviewOutputs = new Map();
-  }
-
-  public scheduleObsoletePreviewCleanup(state: PanelState): void {
-    if (state.drawioCleanupTimer || state.obsoleteDrawioPreviewDirectories.length === 0) {
-      return;
-    }
-
-    state.drawioCleanupTimer = setTimeout(() => {
-      state.drawioCleanupTimer = null;
-      const directories = state.obsoleteDrawioPreviewDirectories.splice(0);
-      for (const directory of directories) {
-        void this.deletePreviewDirectory(directory);
-      }
-    }, DRAWIO_OBSOLETE_PREVIEW_CLEANUP_DELAY_MS);
   }
 
   public async resolvePreviewResource(
@@ -65,6 +32,7 @@ export class DrawioPreviewManager {
     original: string,
     suffix: string,
     targetUri: vscode.Uri,
+    targetStat: vscode.FileStat,
   ): Promise<ResourceDescriptor> {
     const fallback: ResourceDescriptor = {
       original,
@@ -85,12 +53,12 @@ export class DrawioPreviewManager {
       return fallback;
     }
 
-    const previewDirectory = state.drawioPreviewDirectory;
-    if (!previewDirectory) {
-      return fallback;
-    }
-
-    const outputKey = `${targetUri.toString()}:${DRAWIO_PAGE_INDEX}`;
+    const outputKey = [
+      targetUri.toString(),
+      DRAWIO_PAGE_INDEX,
+      targetStat.mtime,
+      targetStat.size,
+    ].join(':');
     const existingOutputUri = state.drawioPreviewOutputs.get(outputKey);
     if (existingOutputUri) {
       return {
@@ -102,10 +70,11 @@ export class DrawioPreviewManager {
     }
 
     const outputName = `${createHash('sha256').update(outputKey).digest('hex')}.svg`;
-    const outputUri = vscode.Uri.joinPath(previewDirectory, outputName);
+    const outputUri = vscode.Uri.joinPath(state.drawioPreviewRoot, outputName);
 
     try {
-      await vscode.workspace.fs.createDirectory(previewDirectory);
+      await this.clearStaleOutputs(state, targetUri);
+      await vscode.workspace.fs.createDirectory(state.drawioPreviewRoot);
       await execFileAsync(
         cliPath,
         [
@@ -141,6 +110,21 @@ export class DrawioPreviewManager {
         drawioPreviewMessage: DRAWIO_PREVIEW_FAILED_MESSAGE,
       };
     }
+  }
+
+  private async clearStaleOutputs(state: PanelState, targetUri: vscode.Uri): Promise<void> {
+    const targetPrefix = `${targetUri.toString()}:${DRAWIO_PAGE_INDEX}:`;
+    const staleEntries = Array.from(state.drawioPreviewOutputs.entries())
+      .filter(([key]) => key.startsWith(targetPrefix));
+
+    if (staleEntries.length === 0) {
+      return;
+    }
+
+    await Promise.all(staleEntries.map(async ([key, uri]) => {
+      state.drawioPreviewOutputs.delete(key);
+      await this.deletePreviewFile(uri);
+    }));
   }
 
   private async findCliPath(): Promise<string | null> {
@@ -226,6 +210,20 @@ export class DrawioPreviewManager {
 
       const message = error instanceof Error ? error.message : String(error);
       console.warn(`[markcanvas] failed to clean draw.io preview files: ${message}`);
+    }
+  }
+
+  private async deletePreviewFile(uri: vscode.Uri): Promise<void> {
+    try {
+      await vscode.workspace.fs.stat(uri);
+      await vscode.workspace.fs.delete(uri, { recursive: false, useTrash: false });
+    } catch (error) {
+      if (error instanceof vscode.FileSystemError && error.code === 'FileNotFound') {
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[markcanvas] failed to clean draw.io preview file: ${message}`);
     }
   }
 }

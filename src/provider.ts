@@ -10,6 +10,8 @@ import type {
   WebviewToExtensionMessage,
 } from './types';
 
+const DOCUMENT_SYNC_DEBOUNCE_MS = 120;
+
 export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   public static readonly viewType = 'renderedMarkdown.editor';
 
@@ -39,33 +41,18 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
     const state = createPanelState(this.context, panel, document);
     this.drawioPreviewManager.register(state);
 
-    const sendDocument = async (
-      type: 'initDocument' | 'replaceDocument',
-      origin: 'self' | 'external' = 'external',
-    ) => {
-      if (state.disposed) {
-        return;
-      }
-      const payload = await this.buildPayload(state);
-      if (state.disposed) {
-        return;
-      }
-      this.postMessage(state, { type, payload, origin });
-      this.drawioPreviewManager.scheduleObsoletePreviewCleanup(state);
-    };
-
-    const documentSubscription = vscode.workspace.onDidChangeTextDocument(async (event) => {
+    const documentSubscription = vscode.workspace.onDidChangeTextDocument((event) => {
       if (event.document.uri.toString() !== document.uri.toString()) {
         return;
       }
 
       if (state.applyingVersion === event.document.version) {
         state.applyingVersion = null;
-        await sendDocument('replaceDocument', 'self');
+        this.scheduleDocumentSync(state, 'self');
         return;
       }
 
-      await sendDocument('replaceDocument', 'external');
+      this.scheduleDocumentSync(state, 'external');
     });
 
     const themeSubscription = vscode.window.onDidChangeActiveColorTheme(() => {
@@ -77,6 +64,10 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
 
     panel.onDidDispose(() => {
       state.disposed = true;
+      if (state.documentSyncTimer) {
+        clearTimeout(state.documentSyncTimer);
+        state.documentSyncTimer = null;
+      }
       this.drawioPreviewManager.dispose(state);
       documentSubscription.dispose();
       themeSubscription.dispose();
@@ -99,7 +90,7 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
       }
     });
 
-    await sendDocument('initDocument');
+    await this.sendDocument(state, 'initDocument');
     this.postMessage(state, {
       type: 'themeChanged',
       themeKind: this.getThemeKind(vscode.window.activeColorTheme),
@@ -118,14 +109,60 @@ export class RenderedMarkdownEditorProvider implements vscode.CustomTextEditorPr
     }
   }
 
+  private scheduleDocumentSync(state: PanelState, origin: 'self' | 'external'): void {
+    state.pendingDocumentSyncOrigin = state.pendingDocumentSyncOrigin === 'external' || origin === 'external'
+      ? 'external'
+      : origin;
+
+    if (state.documentSyncInFlight || state.documentSyncTimer) {
+      return;
+    }
+
+    state.documentSyncTimer = setTimeout(() => {
+      state.documentSyncTimer = null;
+      const pendingOrigin = state.pendingDocumentSyncOrigin ?? 'external';
+      state.pendingDocumentSyncOrigin = null;
+      void this.sendDocument(state, 'replaceDocument', pendingOrigin);
+    }, DOCUMENT_SYNC_DEBOUNCE_MS);
+  }
+
+  private async sendDocument(
+    state: PanelState,
+    type: 'initDocument' | 'replaceDocument',
+    origin: 'self' | 'external' = 'external',
+  ): Promise<void> {
+    if (state.disposed || state.documentSyncInFlight) {
+      return;
+    }
+
+    state.documentSyncInFlight = true;
+    const payload = await this.buildPayload(state);
+    state.documentSyncInFlight = false;
+    if (state.disposed) {
+      return;
+    }
+
+    if (state.document.version !== payload.version) {
+      this.scheduleDocumentSync(state, 'external');
+      return;
+    }
+
+    this.postMessage(state, { type, payload, origin });
+
+    if (state.pendingDocumentSyncOrigin) {
+      this.scheduleDocumentSync(state, state.pendingDocumentSyncOrigin);
+    }
+  }
+
   private async buildPayload(state: PanelState): Promise<DocumentPayload> {
-    this.drawioPreviewManager.beginGeneration(state);
-    const resources = await this.resourceResolver.collectResources(state);
+    const version = state.document.version;
+    const markdown = state.document.getText();
+    const resources = await this.resourceResolver.collectResources(state, markdown);
 
     return {
       uri: state.document.uri.toString(),
-      version: state.document.version,
-      markdown: state.document.getText(),
+      version,
+      markdown,
       resources,
     };
   }

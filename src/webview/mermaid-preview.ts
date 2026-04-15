@@ -76,9 +76,13 @@ function getMermaidThemeVariables() {
 
 export function createMermaidPreviewManager(options: MermaidPreviewManagerOptions) {
   let previewCounter = 0;
-  const previewSources = new WeakMap<MermaidPreviewApply, string>();
-  const previewRenderVersions = new WeakMap<MermaidPreviewApply, number>();
-  const previewAppliers = new Set<MermaidPreviewApply>();
+  let previewHandleCounter = 0;
+  const previewHandleIds = new WeakMap<MermaidPreviewApply, number>();
+  const previewHandles = new Map<number, {
+    applyPreviewRef: WeakRef<MermaidPreviewApply>;
+    renderVersion: number;
+    source: string;
+  }>();
 
   function getEffectivePreviewTheme(themeState: MermaidThemeState): 'light' | 'dark' {
     if (themeState.previewTheme === 'light' || themeState.previewTheme === 'dark') {
@@ -103,26 +107,29 @@ export function createMermaidPreviewManager(options: MermaidPreviewManagerOption
   }
 
   async function renderPreviewContent(
+    handleId: number,
     applyPreview: MermaidPreviewApply,
     content: string,
   ): Promise<void> {
     const previewVersion = previewCounter += 1;
     const renderId = `mermaid-preview-${previewVersion}`;
 
-    previewSources.set(applyPreview, content);
-    previewRenderVersions.set(applyPreview, previewVersion);
-    previewAppliers.add(applyPreview);
+    previewHandles.set(handleId, {
+      applyPreviewRef: new WeakRef(applyPreview),
+      renderVersion: previewVersion,
+      source: content,
+    });
     applyPreview('<div class="mermaid-preview mermaid-preview--loading"></div>');
 
     try {
       const result = await mermaid.render(renderId, content);
-      if (previewRenderVersions.get(applyPreview) !== previewVersion) {
+      if (previewHandles.get(handleId)?.renderVersion !== previewVersion) {
         return;
       }
 
       applyPreview(`<div class="mermaid-preview">${result.svg}</div>`);
     } catch (error) {
-      if (previewRenderVersions.get(applyPreview) !== previewVersion) {
+      if (previewHandles.get(handleId)?.renderVersion !== previewVersion) {
         return;
       }
 
@@ -141,17 +148,24 @@ export function createMermaidPreviewManager(options: MermaidPreviewManagerOption
       return null;
     }
 
-    void renderPreviewContent(applyPreview, content);
+    let handleId = previewHandleIds.get(applyPreview);
+    if (handleId == null) {
+      handleId = previewHandleCounter += 1;
+      previewHandleIds.set(applyPreview, handleId);
+    }
+
+    void renderPreviewContent(handleId, applyPreview, content);
   }
 
   function rerender(): void {
-    for (const applyPreview of Array.from(previewAppliers)) {
-      const source = previewSources.get(applyPreview);
-      if (!source) {
+    for (const [handleId, previewHandle] of Array.from(previewHandles.entries())) {
+      const applyPreview = previewHandle.applyPreviewRef.deref();
+      if (!applyPreview) {
+        previewHandles.delete(handleId);
         continue;
       }
 
-      void renderPreviewContent(applyPreview, source);
+      void renderPreviewContent(handleId, applyPreview, previewHandle.source);
     }
   }
 

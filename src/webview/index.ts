@@ -31,13 +31,11 @@ declare global {
     acquireVsCodeApi(): {
       postMessage(message: WebviewToExtensionMessage): void;
       getState(): {
-        payload?: DocumentPayload;
         previewTheme?: PreviewTheme;
         viewportScrollX?: number;
         viewportScrollY?: number;
       } | undefined;
       setState(state: {
-        payload?: DocumentPayload;
         previewTheme?: PreviewTheme;
         viewportScrollX?: number;
         viewportScrollY?: number;
@@ -49,7 +47,7 @@ declare global {
 const vscode = window.acquireVsCodeApi();
 const initialState = vscode.getState();
 
-let payload = initialState?.payload;
+let payload: DocumentPayload | undefined;
 let currentVersion = payload?.version ?? 0;
 let previewTheme: PreviewTheme = initialState?.previewTheme ?? 'system';
 let hostThemeKind: HostThemeKind = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -62,6 +60,7 @@ let crepe: Crepe | null = null;
 let baselineMarkdownSnapshot: MarkdownSnapshot | null = null;
 let tableWidthState: TableWidthState = createTableWidthState(payload?.markdown ?? '');
 let tableWidthManager: ReturnType<typeof createTableWidthManager> | null = null;
+let viewportStateFrame = 0;
 let pendingInitialViewportScroll = initialState
   && Number.isFinite(initialState.viewportScrollX)
   && Number.isFinite(initialState.viewportScrollY)
@@ -149,10 +148,20 @@ const markdownEditor = createMarkdownEditorBridge({
 
 function persistState(): void {
   vscode.setState({
-    payload,
     previewTheme,
     viewportScrollX: window.scrollX,
     viewportScrollY: window.scrollY,
+  });
+}
+
+function scheduleViewportStatePersist(): void {
+  if (viewportStateFrame !== 0) {
+    return;
+  }
+
+  viewportStateFrame = window.requestAnimationFrame(() => {
+    viewportStateFrame = 0;
+    persistState();
   });
 }
 
@@ -374,10 +383,14 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
 }
 
 window.addEventListener('scroll', () => {
-  persistState();
+  scheduleViewportStatePersist();
 }, { passive: true });
 
 window.addEventListener('beforeunload', () => {
+  if (viewportStateFrame !== 0) {
+    window.cancelAnimationFrame(viewportStateFrame);
+    viewportStateFrame = 0;
+  }
   persistState();
   drawioOverlay.destroy();
   tableWidthManager?.destroy();
