@@ -2,7 +2,7 @@
   "name": "markcanvas",
   "displayName": "MarkCanvas",
   "description": "Rendered Markdown editor with Mermaid and Draw.io support",
-  "version": "0.0.25",
+  "version": "0.1.0",
   "publisher": "ShinyaIwasaki",
   "license": "MIT",
   "icon": "images/icon.png",
