@@ -39,6 +39,8 @@ export function createMermaidPreviewManager(options: MermaidPreviewManagerOption
       securityLevel: 'loose',
       // Use plain SVG text labels because foreignObject-based labels can disappear inside VS Code webviews.
       htmlLabels: false,
+      // Keep Mermaid parse errors inside our inline banner instead of leaving a global error SVG in the document.
+      suppressErrorRendering: true,
       theme: getEffectivePreviewTheme(themeState) === 'light' ? 'default' : 'dark',
     });
   }
