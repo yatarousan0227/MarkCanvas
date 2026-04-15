@@ -11,6 +11,7 @@ let commonmarkPreset;
 let gfmPreset;
 let milkdownUtils;
 let tableWidths;
+let drawioOverlay;
 const fallbackEventTarget = new EventTarget();
 
 const DOM_GLOBAL_KEYS = [
@@ -479,12 +480,13 @@ async function importTypeScriptModule(filePath) {
 
 suite('MarkCanvas markdown round-trip', () => {
   suiteSetup(async () => {
-    [milkdownCore, commonmarkPreset, gfmPreset, milkdownUtils, tableWidths] = await Promise.all([
+    [milkdownCore, commonmarkPreset, gfmPreset, milkdownUtils, tableWidths, drawioOverlay] = await Promise.all([
       import('@milkdown/kit/core'),
       import('@milkdown/kit/preset/commonmark'),
       import('@milkdown/kit/preset/gfm'),
       import('@milkdown/utils'),
       importTypeScriptModule(path.join(__dirname, '..', '..', 'src', 'webview', 'table-widths.ts')),
+      importTypeScriptModule(path.join(__dirname, '..', '..', 'src', 'webview', 'drawio.ts')),
     ]);
   });
 
@@ -679,6 +681,67 @@ suite('MarkCanvas markdown round-trip', () => {
 
     const result = await roundTripMarkCanvasMarkdown(markdown);
     assert.equal(result, markdown);
+  });
+
+  test('preserves draw.io image links in MarkCanvas config', async function testDrawioImageRoundTrip() {
+    this.timeout(10000);
+
+    const markdown = [
+      '![BPMN process](./fixtures/bpmn-2-example.drawio)',
+      '',
+    ].join('\n');
+
+    const result = await roundTripMarkCanvasMarkdown(markdown);
+    assert.equal(result, markdown);
+  });
+
+  test('renders a draw.io placeholder when preview generation is unavailable', () => {
+    const dom = installDom();
+    let manager;
+
+    try {
+      document.body.innerHTML = [
+        '<div class="milkdown">',
+        '  <img src="./fixtures/bpmn-2-example.drawio" alt="BPMN process">',
+        '</div>',
+      ].join('');
+
+      const messages = [];
+      manager = drawioOverlay.createDrawioOverlayManager({
+        postMessage: (message) => {
+          messages.push(message);
+        },
+      });
+      manager.render({
+        resourceCache: new Map([
+          ['./fixtures/bpmn-2-example.drawio', {
+            original: './fixtures/bpmn-2-example.drawio',
+            resolved: null,
+            exists: true,
+            isDrawio: true,
+            openTarget: 'file:///tmp/bpmn-2-example.drawio',
+            drawioPreviewStatus: 'unavailable',
+            drawioPreviewMessage: 'Install draw.io Desktop to preview draw.io files in MarkCanvas.',
+          }],
+        ]),
+        resolvedResourceCache: new Map(),
+      });
+
+      const placeholder = document.querySelector('.markcanvas-drawio-placeholder');
+      assert.ok(placeholder);
+      assert.match(placeholder.textContent, /draw\.io preview unavailable/);
+      assert.match(placeholder.textContent, /Install draw\.io Desktop/);
+      assert.equal(document.querySelector('.milkdown img'), null);
+
+      document.querySelector('.markcanvas-drawio-placeholder-button').click();
+      assert.deepEqual(messages, [{
+        type: 'openDrawioFile',
+        target: 'file:///tmp/bpmn-2-example.drawio',
+      }]);
+    } finally {
+      manager?.destroy();
+      dom.restore();
+    }
   });
 
   test('preserves filename-like link labels without escaping underscores', async function testLinkLabelRoundTrip() {

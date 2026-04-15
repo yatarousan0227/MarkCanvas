@@ -112,6 +112,14 @@ flowchart TB
 
 ![1.00](./fixtures/sample.drawio.svg)
 
+## Draw\.io Native File
+
+下の画像は `.drawio` ファイルとして検出される想定です。
+draw.io Desktop が入っている環境では SVG プレビューが表示され、`Open Diagram File` から元の `.drawio` ファイルを開けることを確認します。
+draw.io Desktop が入っていない環境では、draw.io Desktop が必要であることを明記したプレースホルダーと `Open draw.io file` ボタンが表示されることを確認します。
+
+![BPMN process](./fixtures/bpmn-2-example.drawio)
+
 ## Plain SVG
 
 下の画像は通常 SVG として扱われ、draw\.io のアクションが出ないことを確認します。

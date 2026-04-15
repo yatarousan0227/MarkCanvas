@@ -57,6 +57,58 @@ function createOverlayButton(
   return button;
 }
 
+function createPlaceholderButton(
+  target: string,
+  postMessage: (message: WebviewToExtensionMessage) => void,
+): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'markcanvas-drawio-placeholder-button';
+  button.textContent = 'Open draw.io file';
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    postMessage({
+      type: 'openDrawioFile',
+      target,
+    });
+  });
+
+  return button;
+}
+
+function createPlaceholder(
+  image: HTMLImageElement,
+  resource: ResourceDescriptor,
+  postMessage: (message: WebviewToExtensionMessage) => void,
+): HTMLElement {
+  const placeholder = document.createElement('div');
+  placeholder.className = 'markcanvas-drawio-placeholder';
+  placeholder.contentEditable = 'false';
+
+  const title = document.createElement('strong');
+  title.textContent = 'draw.io preview unavailable';
+  placeholder.append(title);
+
+  const message = document.createElement('p');
+  message.textContent = resource.drawioPreviewMessage
+    ?? 'Install draw.io Desktop to preview draw.io files in MarkCanvas.';
+  placeholder.append(message);
+
+  if (image.alt) {
+    const alt = document.createElement('span');
+    alt.className = 'markcanvas-drawio-placeholder-alt';
+    alt.textContent = image.alt;
+    placeholder.append(alt);
+  }
+
+  if (resource.openTarget) {
+    placeholder.append(createPlaceholderButton(resource.openTarget, postMessage));
+  }
+
+  return placeholder;
+}
+
 export function createDrawioOverlayManager(options: DrawioOverlayManagerOptions) {
   const layer = document.createElement('div');
   layer.className = 'markcanvas-drawio-overlay-layer';
@@ -141,6 +193,16 @@ export function createDrawioOverlayManager(options: DrawioOverlayManagerOptions)
         const resource = renderOptions.resourceCache.get(rawSource)
           ?? renderOptions.resolvedResourceCache.get(rawSource);
         if (!resource) {
+          continue;
+        }
+
+        if (
+          resource.isDrawio
+          && resource.openTarget
+          && resource.drawioPreviewStatus
+          && resource.drawioPreviewStatus !== 'ready'
+        ) {
+          image.replaceWith(createPlaceholder(image, resource, options.postMessage));
           continue;
         }
 

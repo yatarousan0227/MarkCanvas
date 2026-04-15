@@ -222,11 +222,15 @@ export function renderHtmlPreviews(options: HtmlPreviewOptions): void {
   const htmlNodes = document.querySelectorAll<HTMLElement>('.milkdown .ProseMirror span[data-type="html"]');
 
   const resolveResourceUrl = (value: string): string | null => {
-    const resolved = options.resourceCache.get(value)?.resolved
-      ?? options.resolvedResourceCache.get(value)?.resolved
+    const resource = options.resourceCache.get(value) ?? options.resolvedResourceCache.get(value);
+    const resolved = resource?.resolved
       ?? resolveResourceWithSuffix(value, options);
     if (resolved) {
       return resolved;
+    }
+
+    if (resource?.isDrawio && resource.openTarget) {
+      return value;
     }
 
     if (value.startsWith('#') || /^(https?:|mailto:|tel:|data:image\/)/i.test(value)) {

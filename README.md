@@ -30,7 +30,7 @@ MarkCanvas currently targets desktop VS Code and local Markdown files.
 Known limitations:
 
 - Web extension support is out of scope for the current version
-- draw.io support only applies to linked SVG files that end with `.drawio.svg` or contain embedded draw.io metadata
+- linked `.drawio.svg` files preview directly; linked `.drawio` files require draw.io Desktop for open-time SVG preview generation, show a placeholder when it is unavailable, and reflect updates when MarkCanvas is reopened
 - Markdown remains canonical; MarkCanvas does not maintain a parallel document model
 
 ## Getting Started

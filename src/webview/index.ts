@@ -4,9 +4,7 @@ import './styles.css';
 import { LanguageDescription } from '@codemirror/language';
 import { languages as defaultCodeBlockLanguages } from '@codemirror/language-data';
 import type { Editor } from '@milkdown/kit/core';
-import { editorViewCtx, parserCtx, remarkStringifyOptionsCtx } from '@milkdown/kit/core';
-import { Slice } from '@milkdown/kit/prose/model';
-import { Selection, TextSelection } from '@milkdown/kit/prose/state';
+import { editorViewCtx } from '@milkdown/kit/core';
 import { Crepe } from '@milkdown/crepe';
 import type {
   DocumentPayload,
@@ -15,11 +13,13 @@ import type {
   WebviewToExtensionMessage,
 } from '../types';
 import { createDrawioOverlayManager } from './drawio';
+import { createEditIntentTracker } from './edit-intent';
 import { renderHtmlPreviews } from './html-preview';
-import { createMarkdownSnapshot, reconcileMarkdownSnapshots, type MarkdownSnapshot } from './markdown-reconciler';
+import { createMarkdownEditorBridge } from './markdown-editor';
+import { createMarkdownSnapshot, type MarkdownSnapshot } from './markdown-reconciler';
 import { createMermaidPreviewManager } from './mermaid-preview';
 import { createTableWidthManager } from './table-width-plugin';
-import { applyTableWidthState, createTableWidthState, type TableWidthState } from './table-widths';
+import { createTableWidthState, type TableWidthState } from './table-widths';
 import {
   createThemeControlsManager,
 } from './theme-controls';
@@ -62,7 +62,6 @@ let crepe: Crepe | null = null;
 let baselineMarkdownSnapshot: MarkdownSnapshot | null = null;
 let tableWidthState: TableWidthState = createTableWidthState(payload?.markdown ?? '');
 let tableWidthManager: ReturnType<typeof createTableWidthManager> | null = null;
-let pendingUserEditIntent = false;
 let pendingInitialViewportScroll = initialState
   && Number.isFinite(initialState.viewportScrollX)
   && Number.isFinite(initialState.viewportScrollY)
@@ -123,6 +122,31 @@ const drawioOverlay = createDrawioOverlayManager({
   postMessage,
 });
 
+const editIntent = createEditIntentTracker({
+  prepareTableOperation: (target) => {
+    tableWidthManager?.prepareTableOperation(target);
+  },
+});
+
+const markdownEditor = createMarkdownEditorBridge({
+  getBaselineMarkdownSnapshot: () => baselineMarkdownSnapshot,
+  getCrepe: () => crepe,
+  getEditorInstance: () => editorInstance,
+  getTableWidthState: () => tableWidthState,
+  setSuppressUpdates: (value) => {
+    suppressUpdates = value;
+  },
+  clearUserEditIntent: () => {
+    editIntent.clear();
+  },
+  sendMarkdownUpdate: (markdown) => {
+    sendMarkdownUpdate(markdown);
+  },
+  refreshEditorDecorations: () => {
+    refreshEditorDecorations();
+  },
+});
+
 function persistState(): void {
   vscode.setState({
     payload,
@@ -173,180 +197,6 @@ function refreshEditorDecorations(): void {
   tableWidthManager?.refresh();
 }
 
-function markUserEditIntent(): void {
-  pendingUserEditIntent = true;
-}
-
-function clearUserEditIntent(): void {
-  pendingUserEditIntent = false;
-}
-
-function consumeUserEditIntent(): boolean {
-  const shouldApply = pendingUserEditIntent;
-  pendingUserEditIntent = false;
-  return shouldApply;
-}
-
-function shouldTreatKeydownAsEditIntent(event: KeyboardEvent): boolean {
-  if (event.isComposing) {
-    return true;
-  }
-
-  if (event.key === 'Enter' || event.key === 'Backspace' || event.key === 'Delete' || event.key === 'Tab') {
-    return true;
-  }
-
-  if ((event.metaKey || event.ctrlKey) && /^[a-z0-9]$/i.test(event.key)) {
-    return true;
-  }
-
-  return false;
-}
-
-function installUserEditIntentTracking(): void {
-  const root = document.getElementById('app');
-  if (!root) {
-    return;
-  }
-
-  const markStructuredEditIntent = (eventTarget: EventTarget | null, prepareTableOperation = false): void => {
-    if (!(eventTarget instanceof HTMLInputElement)) {
-      if (!(eventTarget instanceof Element)) {
-        return;
-      }
-
-      if (eventTarget.closest('.milkdown-list-item-block .label-wrapper')) {
-        markUserEditIntent();
-      }
-
-      if (eventTarget.closest('.milkdown-table-block button')) {
-        markUserEditIntent();
-        if (prepareTableOperation) {
-          tableWidthManager?.prepareTableOperation(eventTarget);
-        }
-      }
-
-      return;
-    }
-
-    if (eventTarget.type !== 'checkbox') {
-      return;
-    }
-
-    markUserEditIntent();
-  };
-
-  root.addEventListener('beforeinput', () => {
-    markUserEditIntent();
-  }, true);
-  root.addEventListener('paste', () => {
-    markUserEditIntent();
-  }, true);
-  root.addEventListener('cut', () => {
-    markUserEditIntent();
-  }, true);
-  root.addEventListener('drop', () => {
-    markUserEditIntent();
-  }, true);
-  root.addEventListener('pointerdown', (event) => {
-    markStructuredEditIntent(event.target, true);
-  }, true);
-  root.addEventListener('click', (event) => {
-    markStructuredEditIntent(event.target);
-  }, true);
-  root.addEventListener('change', (event) => {
-    markStructuredEditIntent(event.target);
-  }, true);
-  root.addEventListener('keydown', (event) => {
-    if (shouldTreatKeydownAsEditIntent(event)) {
-      markUserEditIntent();
-    }
-  }, true);
-}
-
-function preserveLiteralText(value: string): boolean {
-  return /^[A-Za-z0-9][A-Za-z0-9./_-]*$/.test(value);
-}
-
-function normalizeEscapedText(value: string): string {
-  return value
-    .replace(/\\\./g, '.')
-    .replace(/([A-Za-z0-9./-])\\_([A-Za-z0-9./-])/g, '$1_$2')
-    .replace(/([A-Za-z0-9])\\\*([A-Za-z0-9])/g, '$1*$2')
-    .replace(/\\\[([^[\]\r\n]+)](?!\(|\[)/g, '[$1]');
-}
-
-function configureMarkdownSerialization(): void {
-  if (!crepe) {
-    return;
-  }
-
-  crepe.editor.config((ctx) => {
-    ctx.update(remarkStringifyOptionsCtx, (value) => ({
-      ...value,
-      bullet: '-' as const,
-      join: [
-        (left, right, parent) => {
-          if (parent && (parent.type === 'list' || parent.type === 'listItem')) {
-            return 0;
-          }
-
-          return undefined;
-        },
-      ],
-      handlers: {
-        ...value.handlers,
-        text: (node, _, state, info) => {
-          const text = typeof node.value === 'string' ? node.value : '';
-          if (preserveLiteralText(text) || /^[^*_\\]*\s+$/.test(text)) {
-            return text;
-          }
-
-          return normalizeEscapedText(state.safe(text, {
-            ...info,
-            encode: [],
-          }));
-        },
-      },
-    }));
-  });
-}
-
-function insertMarkdownAtSelection(markdown: string): void {
-  if (!editorInstance) {
-    return;
-  }
-
-  suppressUpdates = true;
-  try {
-    editorInstance.action((ctx) => {
-      const view = ctx.get(editorViewCtx);
-      const parser = ctx.get(parserCtx);
-      const doc = parser(markdown);
-      if (!doc) {
-        return;
-      }
-
-      const contentSlice = view.state.selection.content();
-      const replacement = new Slice(doc.content, contentSlice.openStart, contentSlice.openEnd);
-      view.dispatch(view.state.tr.replaceSelection(replacement).scrollIntoView());
-    });
-  } finally {
-    suppressUpdates = false;
-  }
-
-  if (!crepe) {
-    return;
-  }
-
-  const nextMarkdown = reconstructMarkdownForSave(crepe.getMarkdown());
-  clearUserEditIntent();
-  sendMarkdownUpdate(nextMarkdown);
-  queueMicrotask(() => {
-    refreshEditorDecorations();
-  });
-}
-
 function sendMarkdownUpdate(markdown: string): void {
   if (!payload) {
     return;
@@ -368,49 +218,6 @@ function sendMarkdownUpdate(markdown: string): void {
     markdown,
     version: currentVersion,
   });
-}
-
-function reconstructMarkdownForSave(markdown: string): string {
-  let reconstructedMarkdown = markdown;
-  if (!baselineMarkdownSnapshot) {
-    return applyTableWidthState(reconstructedMarkdown, tableWidthState);
-  }
-
-  try {
-    reconstructedMarkdown = reconcileMarkdownSnapshots(
-      baselineMarkdownSnapshot,
-      createMarkdownSnapshot(markdown),
-    );
-  } catch {
-    reconstructedMarkdown = markdown;
-  }
-
-  return applyTableWidthState(reconstructedMarkdown, tableWidthState);
-}
-
-function shouldSkipMarkdownReset(markdown: string, force: boolean): boolean {
-  if (!crepe) {
-    return true;
-  }
-
-  const currentMarkdown = crepe.getMarkdown();
-  if (currentMarkdown === markdown) {
-    return true;
-  }
-
-  if (force) {
-    return false;
-  }
-
-  try {
-    return reconstructMarkdownForSave(currentMarkdown) === markdown;
-  } catch {
-    return false;
-  }
-}
-
-function clampSelectionPosition(position: number, size: number): number {
-  return Math.max(0, Math.min(position, size));
 }
 
 function restoreViewportScroll(x: number, y: number): void {
@@ -438,7 +245,7 @@ function applyPayload(next: DocumentPayload): void {
   payload = next;
   currentVersion = next.version;
   markdownUpdateInFlight = false;
-  clearUserEditIntent();
+  editIntent.clear();
   baselineMarkdownSnapshot = createMarkdownSnapshot(next.markdown);
   tableWidthState = createTableWidthState(next.markdown);
   resourceCache.clear();
@@ -476,49 +283,6 @@ function setPreviewTheme(nextTheme: PreviewTheme): void {
   mermaidPreview.rerender();
 }
 
-function setEditorMarkdown(markdown: string, force = false): void {
-  if (!editorInstance || shouldSkipMarkdownReset(markdown, force)) {
-    return;
-  }
-
-  suppressUpdates = true;
-  clearUserEditIntent();
-  const previousScrollX = window.scrollX;
-  const previousScrollY = window.scrollY;
-  try {
-    editorInstance.action((ctx) => {
-      const view = ctx.get(editorViewCtx);
-      const parser = ctx.get(parserCtx);
-      const doc = parser(markdown);
-      if (!doc) {
-        return;
-      }
-
-      const { state } = view;
-      let tr = state.tr.replace(0, state.doc.content.size, new Slice(doc.content, 0, 0));
-      const anchor = clampSelectionPosition(state.selection.anchor, tr.doc.content.size);
-      const head = clampSelectionPosition(state.selection.head, tr.doc.content.size);
-
-      try {
-        tr = state.selection instanceof TextSelection
-          ? tr.setSelection(TextSelection.between(tr.doc.resolve(anchor), tr.doc.resolve(head)))
-          : tr.setSelection(Selection.near(tr.doc.resolve(anchor)));
-      } catch {
-        tr = tr.setSelection(Selection.near(tr.doc.resolve(anchor)));
-      }
-
-      view.dispatch(tr);
-    });
-  } finally {
-    suppressUpdates = false;
-  }
-
-  restoreViewportScroll(previousScrollX, previousScrollY);
-  requestAnimationFrame(() => {
-    restoreViewportScroll(previousScrollX, previousScrollY);
-  });
-}
-
 async function createEditor(initial: DocumentPayload): Promise<void> {
   applyPayload(initial);
   refreshPreviewTheme();
@@ -535,7 +299,7 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
       featureConfigs: {
         [Crepe.Feature.TopBar]: createTopBarConfig({
           onUserEditIntent: () => {
-            markUserEditIntent();
+            editIntent.mark();
           },
           onRequestImageInsertion: () => {
             postMessage({
@@ -555,7 +319,7 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
         },
       },
     });
-    configureMarkdownSerialization();
+    markdownEditor.configureMarkdownSerialization();
     tableWidthManager = createTableWidthManager({
       getState: () => tableWidthState,
       dispatchResizeTransaction: () => {
@@ -569,9 +333,9 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
           return;
         }
 
-        markUserEditIntent();
-        const nextMarkdown = reconstructMarkdownForSave(crepe.getMarkdown());
-        clearUserEditIntent();
+        editIntent.mark();
+        const nextMarkdown = markdownEditor.reconstructMarkdownForSave(crepe.getMarkdown());
+        editIntent.clear();
         sendMarkdownUpdate(nextMarkdown);
       },
     });
@@ -582,11 +346,11 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
           return;
         }
 
-        if (!consumeUserEditIntent()) {
+        if (!editIntent.consume()) {
           return;
         }
 
-        sendMarkdownUpdate(reconstructMarkdownForSave(markdown));
+        sendMarkdownUpdate(markdownEditor.reconstructMarkdownForSave(markdown));
         queueMicrotask(() => {
           refreshEditorDecorations();
         });
@@ -594,7 +358,7 @@ async function createEditor(initial: DocumentPayload): Promise<void> {
     });
 
     editorInstance = await crepe.create();
-    installUserEditIntentTracking();
+    editIntent.install(document.getElementById('app'));
     restoreInitialViewportScroll();
     themeControls.ensureControls();
     refreshEditorDecorations();
@@ -629,7 +393,7 @@ function handleMessage(message: ExtensionToWebviewMessage): void {
     case 'replaceDocument':
       applyPayload(message.payload);
       if (message.origin !== 'self') {
-        setEditorMarkdown(message.payload.markdown);
+        markdownEditor.setEditorMarkdown(message.payload.markdown);
       }
       queueMicrotask(() => {
         refreshEditorDecorations();
@@ -653,11 +417,11 @@ function handleMessage(message: ExtensionToWebviewMessage): void {
       return;
     case 'insertImageResult':
       if (message.ok && message.markdown) {
-        insertMarkdownAtSelection(message.markdown);
+        markdownEditor.insertMarkdownAtSelection(message.markdown);
         return;
       }
 
-      clearUserEditIntent();
+      editIntent.clear();
       if (message.error) {
         postMessage({
           type: 'reportRenderError',

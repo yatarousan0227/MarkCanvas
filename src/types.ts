@@ -4,6 +4,8 @@ export interface ResourceDescriptor {
   exists: boolean;
   isDrawio: boolean;
   openTarget: string | null;
+  drawioPreviewStatus?: 'ready' | 'unavailable' | 'failed';
+  drawioPreviewMessage?: string;
 }
 
 export interface DocumentPayload {
