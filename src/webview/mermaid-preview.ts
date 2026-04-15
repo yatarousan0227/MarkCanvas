@@ -83,6 +83,19 @@ export function createMermaidPreviewManager(options: MermaidPreviewManagerOption
     renderVersion: number;
     source: string;
   }>();
+  const previewHandleFinalizer = typeof FinalizationRegistry === 'undefined'
+    ? null
+    : new FinalizationRegistry<number>((handleId) => {
+      previewHandles.delete(handleId);
+    });
+
+  function cleanupDeadHandles(): void {
+    for (const [handleId, previewHandle] of Array.from(previewHandles.entries())) {
+      if (!previewHandle.applyPreviewRef.deref()) {
+        previewHandles.delete(handleId);
+      }
+    }
+  }
 
   function getEffectivePreviewTheme(themeState: MermaidThemeState): 'light' | 'dark' {
     if (themeState.previewTheme === 'light' || themeState.previewTheme === 'dark') {
@@ -148,16 +161,19 @@ export function createMermaidPreviewManager(options: MermaidPreviewManagerOption
       return null;
     }
 
+    cleanupDeadHandles();
     let handleId = previewHandleIds.get(applyPreview);
     if (handleId == null) {
       handleId = previewHandleCounter += 1;
       previewHandleIds.set(applyPreview, handleId);
+      previewHandleFinalizer?.register(applyPreview, handleId, applyPreview);
     }
 
     void renderPreviewContent(handleId, applyPreview, content);
   }
 
   function rerender(): void {
+    cleanupDeadHandles();
     for (const [handleId, previewHandle] of Array.from(previewHandles.entries())) {
       const applyPreview = previewHandle.applyPreviewRef.deref();
       if (!applyPreview) {

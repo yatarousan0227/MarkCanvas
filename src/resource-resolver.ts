@@ -4,7 +4,7 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import { visit } from 'unist-util-visit';
 import { DrawioPreviewManager } from './drawio-preview-manager';
-import { PanelState } from './panel-state';
+import type { PanelState, ResourceResolutionCacheEntry } from './panel-state';
 import type { ResourceDescriptor } from './types';
 
 const COMMON_BINARY_IMAGE_EXTENSIONS = new Set(['.avif', '.bmp', '.gif', '.jpeg', '.jpg', '.png', '.webp']);
@@ -16,6 +16,7 @@ export class ResourceResolver {
     const tree = unified().use(remarkParse).parse(markdown);
     const seen = new Set<string>();
     const resources: ResourceDescriptor[] = [];
+    const nextCache = new Map<string, ResourceResolutionCacheEntry>();
 
     const urls: string[] = [];
     visit(tree, 'image', (node: { url?: string }) => {
@@ -38,36 +39,64 @@ export class ResourceResolver {
       }
       seen.add(original);
 
-      resources.push(await this.resolveResource(state, original));
+      const resolved = await this.resolveResource(state, original);
+      resources.push(resolved.descriptor);
+      if (resolved.cacheEntry) {
+        nextCache.set(original, resolved.cacheEntry);
+      } else {
+        nextCache.delete(original);
+      }
     }
 
+    state.resourceResolutionCache = nextCache;
     return resources;
   }
 
   private async resolveResource(
     state: PanelState,
     original: string,
-  ): Promise<ResourceDescriptor> {
+  ): Promise<{
+    descriptor: ResourceDescriptor;
+    cacheEntry: ResourceResolutionCacheEntry | null;
+  }> {
     if (/^[a-z]+:/i.test(original)) {
       return {
-        original,
-        resolved: original,
-        exists: true,
-        isDrawio: false,
-        openTarget: null,
+        descriptor: {
+          original,
+          resolved: original,
+          exists: true,
+          isDrawio: false,
+          openTarget: null,
+        },
+        cacheEntry: null,
       };
     }
 
     const [resourcePath, suffix] = splitResourceReference(original);
     const targetUri = resolveWorkspaceUri(state.document.uri, resourcePath);
     if (!targetUri) {
-      return missingResource(original);
+      return {
+        descriptor: missingResource(original),
+        cacheEntry: null,
+      };
     }
 
     try {
       const stat = await vscode.workspace.fs.stat(targetUri);
       if (stat.type !== vscode.FileType.File) {
-        return missingResource(original);
+        return {
+          descriptor: missingResource(original),
+          cacheEntry: null,
+        };
+      }
+
+      const cacheKey = this.createCacheKey(targetUri, stat, suffix);
+      const cached = state.resourceResolutionCache.get(original);
+      if (cached?.cacheKey === cacheKey) {
+        return {
+          descriptor: cached.descriptor,
+          cacheEntry: cached,
+        };
       }
 
       const lowerPath = targetUri.path.toLowerCase();
@@ -89,16 +118,23 @@ export class ResourceResolver {
       const isDrawio = isDrawioImage || isDrawioXml;
 
       if (isDrawioXml && !isSvg) {
-        return this.drawioPreviewManager.resolvePreviewResource(
+        const descriptor = await this.drawioPreviewManager.resolvePreviewResource(
           state,
           original,
           suffix,
           targetUri,
           stat,
         );
+        return {
+          descriptor,
+          cacheEntry: {
+            cacheKey,
+            descriptor,
+          },
+        };
       }
 
-      return {
+      const descriptor: ResourceDescriptor = {
         original,
         resolved: `${state.panel.webview.asWebviewUri(targetUri).toString()}${suffix}`,
         exists: true,
@@ -106,9 +142,27 @@ export class ResourceResolver {
         openTarget: isDrawio ? targetUri.toString() : null,
         drawioPreviewStatus: isDrawio ? 'ready' : undefined,
       };
+      return {
+        descriptor,
+        cacheEntry: {
+          cacheKey,
+          descriptor,
+        },
+      };
     } catch {
-      return missingResource(original);
+      return {
+        descriptor: missingResource(original),
+        cacheEntry: null,
+      };
     }
+  }
+
+  private createCacheKey(
+    targetUri: vscode.Uri,
+    stat: vscode.FileStat,
+    suffix: string,
+  ): string {
+    return [targetUri.toString(), stat.mtime, stat.size, suffix].join(':');
   }
 }
 
